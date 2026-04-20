@@ -1,10 +1,13 @@
-# Startup Sequence
-
 ## Prerequisites
-- NVIDIA Jetson Orin Nano Super with Jetpack 6.2.1 (rev.1) installed (https://www.youtube.com/watch?v=BaRdpSXU6EM)
-- Intel RealSense D435 plugged in to Jetson via an USB-A to USB-C 3.0 cable
-- U2D2 with all 6 Dynamixel XC430 motors connected and daisy chained, plugged in via USB
-- MPU6050 wired to Jetson GPIO header: ()
+
+### Software
+All software must be installed before running the startup sequence.
+See [installation guide](installation.md) for full instructions.
+
+### Hardware
+- D435 plugged in via USB
+- U2D2 with all 6 motors connected via USB (/dev/ttyUSB0)
+- MPU6050 wired to Jetson GPIO I2C bus 7:
   - VCC → Pin 1 (3.3V)
   - GND → Pin 6 (GND)
   - SDA → Pin 3
@@ -23,6 +26,11 @@ ros2 launch realsense2_camera rs_launch.py \
 ```
 Wait for: `RealSense Node Is Up!`
 
+**Node: realsense2_camera_node**
+Drives the Intel RealSense D435 camera. Publishes RGB images, depth images,
+point cloud and IMU data. The point cloud must be enabled at runtime due to
+a bug in v4.57.7 — see troubleshooting guide.
+
 ## Terminal 2 - Enable Point Cloud
 ```bash
 source /opt/ros/humble/setup.bash
@@ -37,17 +45,34 @@ python3 ~/dynamixel_driver.py
 ```
 Wait for: `Robot ready!`
 
+**Node: [dynamixel_driver](../code/dynamixel_driver.py)**
+Custom node that bridges Nav2 and the physical motors. Subscribes to `/cmd_vel`
+and converts linear/angular velocity commands into left/right motor speeds using
+the Dynamixel SDK. Also reads motor encoder positions and publishes `/odom` so
+Nav2 knows where the robot is. Broadcasts the `odom -> base_link` TF transform.
+
 ## Terminal 4 - Static Transform
 ```bash
 source /opt/ros/humble/setup.bash
 ros2 run tf2_ros static_transform_publisher 0.0 0.0 0.2 0.0 0.0 0.0 base_link camera_link
 ```
 
-Tells ROS2 where the camera is physically mounted on the robot.
+**Node: static_transform_publisher**
+Tells ROS2 where the camera is physically mounted on the robot by publishing
+a fixed `base_link -> camera_link` transform. Without this RTAB-Map cannot
+relate what the camera sees to where the robot is.
 
-- `0.0 0.0 0.2` — (x, y, z) position of the camera in meters
-- `0.0 0.0 0.0` — (roll, pitch, yaw) rotation in radians
-  - all zeros = the camera faces the same direction as the robot
+The numbers mean:
+- `0.0 0.0 0.2` — translation (x, y, z) in meters
+  - x: 0.0 = camera is not offset forward/backward from base
+  - y: 0.0 = camera is not offset left/right from base
+  - z: 0.2 = camera is 20cm above the base
+- `0.0 0.0 0.0` — rotation (roll, pitch, yaw) in radians
+  - all zeros means the camera faces the same direction as the robot
+- `base_link` — the parent frame (robot base)
+- `camera_link` — the child frame (camera)
+
+Change z (0.2) to the actual height of your camera above the robot base in meters.
 
 ## Terminal 5 - RTAB-Map
 ```bash
@@ -65,10 +90,38 @@ ros2 launch rtabmap_launch rtabmap.launch.py \
   rviz:=true
 ```
 
+**Node: rtabmap**
+The main SLAM node. Takes RGB images, depth images and odometry as input and
+builds a 3D map of the environment. Also localizes the robot within that map.
+Publishes the map on `/map` which Nav2 uses for path planning.
+
+**Node: rtabmap_viz**
+Visualizes the RTAB-Map output in RViz2. Shows the current map, point cloud,
+camera trajectory and loop closure detections.
+
 RViz2 opens automatically. Set it up before continuing:
 - Fixed Frame → `map`
 - Add → By topic → `/map` → Map → OK
 - Add → By topic → `/camera/camera/depth/color/points` → PointCloud2 → OK
+
+## Optional - Manual Control
+If you want to manually drive the robot to build the map before
+launching autonomous exploration, run this in a new terminal:
+```bash
+source /opt/ros/humble/setup.bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
+
+Controls:
+- `i` — forward
+- `,` — backward
+- `j` — turn left
+- `l` — turn right
+- `k` — stop
+- `q/z` — increase/decrease speed
+
+Drive the robot slowly around the room to build the map in RViz2.
+Once you have a good map proceed to Terminal 6 and Terminal 7.
 
 ## Terminal 6 - Nav2
 ```bash
@@ -79,9 +132,26 @@ ros2 launch nav2_bringup navigation_launch.py \
 ```
 Wait for: `Managed nodes are active`
 
+**Node: nav2 (multiple nodes)**
+A collection of nodes that together handle autonomous navigation:
+- **controller_server** — sends velocity commands to `/cmd_vel`
+- **planner_server** — calculates the optimal path from A to B
+- **behavior_server** — handles recovery behaviors when the robot gets stuck
+- **bt_navigator** — coordinates all Nav2 nodes using a behavior tree
+- **costmap** — builds a grid showing where obstacles are
+- **velocity_smoother** — smooths out jerky velocity commands
+
 ## Terminal 7 - Autonomous Exploration
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/ros2_ws/install/setup.bash
 ros2 launch explore_lite explore.launch.py
 ```
+
+**Node: explore_lite**
+Autonomous exploration node. Looks at the current map, finds unexplored
+frontier areas and sends navigation goals to Nav2 to explore them.
+The robot drives itself around the room until the full map is built.
+
+Once the full room is mapped you can send specific navigation goals
+by clicking **2D Nav Goal** in RViz2 and clicking anywhere on the map.
