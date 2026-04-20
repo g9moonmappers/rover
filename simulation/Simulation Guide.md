@@ -3,7 +3,7 @@
 ## Goal
 The physical hardware in Steps 1-4 of the [startup guide](../setup/startup.md)
 needs to be replaced with a simulated equivalent. Once that is done,
-Steps 5-7 (RTAB-Map, Nav2 and explore_lite) run identically without any changes.
+Steps 5-6 (RTAB-Map and Nav2) run identically without any changes.
 
 ## What needs to be simulated
 
@@ -41,7 +41,6 @@ odom
 - Color and depth streams must be synchronized
 
 ## Once simulation is running
-Run Steps 5-7 from the [startup guide](../setup/startup.md) exactly as written:
+Run Steps 5-6 from the [startup guide](../setup/startup.md) exactly as written:
 - Step 5 — RTAB-Map builds the map from the simulated camera
 - Step 6 — Nav2 plans paths and sends velocity commands to the simulated motors
-- Step 7 — explore_lite drives the robot autonomously around the simulated environment
