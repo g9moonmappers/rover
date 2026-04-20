@@ -43,6 +43,12 @@ source /opt/ros/humble/setup.bash
 ros2 run tf2_ros static_transform_publisher 0.0 0.0 0.2 0.0 0.0 0.0 base_link camera_link
 ```
 
+Tells ROS2 where the camera is physically mounted on the robot.
+
+- `0.0 0.0 0.2` — (x, y, z) position of the camera in meters
+- `0.0 0.0 0.0` — (roll, pitch, yaw) rotation in radians
+  - all zeros = the camera faces the same direction as the robot
+
 ## Terminal 5 - RTAB-Map
 ```bash
 source /opt/ros/humble/setup.bash
