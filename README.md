@@ -13,13 +13,13 @@ Documentation for all software used by bachelor group 9 (MoonMappers) at USN Kon
   - Right side: IDs 2, 4, 6
 
 ## Software
-- **OS:** Jetpack 6.2.1 (rev.1) / Ubuntu 22.04
+- **OS:** JetPack 6.2.1 (rev.1) / Ubuntu 22.04
 - **ROS2:** Humble
-- **SLAM:** RTAB-Map + Rviz
+- **SLAM:** RTAB-Map + RViz2
 - **Navigation:** Nav2
 - **Camera driver:** realsense2_camera v4.57.7
-- **Motor driver:** dynamixel_sdk
-- **IMU driver:** ros2_mpu6050_driver
+- **Motor driver:** [dynamixel_driver.py](code/dynamixel_driver.py)
+- **IMU driver:** ros2_mpu6050_driver (modified for I2C bus 7)
 
 ## Repository Structure
 - `README.md` — this file
