@@ -26,7 +26,6 @@ Documentation for all software used by bachelor group 9 (MoonMappers) at USN Kon
 - `code/dynamixel_driver.py` — motor driver node
 - `setup/startup.md` — full startup sequence
 - `setup/troubleshooting.md` — common issues and fixes
-- `simulation/README.md` — guide for recreating in simulation
 
 ## Quick Start
 See [setup/startup.md](setup/startup.md)
