@@ -15,23 +15,20 @@ See [installation guide](installation.md) for full instructions.
   - SDA → Pin 3
   - SCL → Pin 5
 
-## Step 1 - Camera
+## Step 1 - Stereocamera D435
 Open a new terminal and run:
 ```bash
 source /opt/ros/humble/setup.bash
 ros2 launch realsense2_camera rs_launch.py \
   enable_sync:=true \
-  enable_gyro:=true \
-  enable_accel:=true \
-  unite_imu_method:=1 \
   depth_module.depth_profile:=640x480x60 \
   rgb_camera.color_profile:=640x480x60
 ```
 Wait for: `RealSense Node Is Up!`
 
 **Node: realsense2_camera_node**
-Drives the Intel RealSense D435 camera. Publishes RGB images, depth images,
-point cloud and IMU data. The point cloud must be enabled at runtime as done
+Drives the Intel RealSense D435 camera. Publishes RGB image, depth image and
+point cloud. The point cloud must be enabled at runtime as done
 in Step 2. For more details see the [troubleshooting guide](troubleshooting.md).
 
 ## Step 2 - Enable Point Cloud
@@ -51,7 +48,7 @@ python3 ~/dynamixel_driver.py
 Wait for: `Robot ready!`
 
 **Node: [dynamixel_driver](../code/dynamixel_driver.py)**
-Custom node that bridges Nav2 and the physical motors. Subscribes to `/cmd_vel`
+Custom node that links Nav2 and the dynamixel motors. Subscribes to `/cmd_vel`
 and converts linear/angular velocity commands into left/right motor speeds using
 the Dynamixel SDK. Also reads motor encoder positions and publishes `/odom` so
 Nav2 knows where the robot is. Broadcasts the `odom -> base_link` TF transform.
@@ -67,18 +64,13 @@ ros2 run tf2_ros static_transform_publisher 0.0 0.0 0.2 0.0 0.0 0.0 base_link ca
 Tells ROS2 where the camera is physically mounted on the robot by publishing
 a fixed `base_link -> camera_link` transform. Without this RTAB-Map cannot
 relate what the camera sees to where the robot is.
-
-The numbers mean:
-- `0.0 0.0 0.2` — translation (x, y, z) in meters
-  - x: 0.0 = camera is not offset forward/backward from base
-  - y: 0.0 = camera is not offset left/right from base
-  - z: 0.2 = camera is 20cm above the base
-- `0.0 0.0 0.0` — rotation (roll, pitch, yaw) in radians
+- `0.0 0.0 0.2` — (x, y, z) camera position in meters
+- `0.0 0.0 0.0` — (roll, pitch, yaw) camera rotation in radians
   - all zeros means the camera faces the same direction as the robot
 - `base_link` — the parent frame (robot base)
 - `camera_link` — the child frame (camera)
 
-Change z (0.2) to the actual height of your camera above the robot base in meters.
+Change z to the actual height of your camera above the robot base in meters.
 See [robot parameters](robot_parameters.md) for more details.
 
 ## Step 5 - RTAB-Map
@@ -112,9 +104,8 @@ RViz2 opens automatically. Set it up before continuing:
 - Add → By topic → `/map` → Map → OK
 - Add → By topic → `/camera/camera/depth/color/points` → PointCloud2 → OK
 
-## Optional - Manual Control
-If you want to manually drive the robot to build the map before
-launching autonomous exploration, open a new terminal and run:
+## (Optional - Manual Control)
+If you want to manually drive the robot using a keyboard, open a new terminal and run:
 ```bash
 source /opt/ros/humble/setup.bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
@@ -127,9 +118,6 @@ Controls:
 - `l` — turn right
 - `k` — stop
 - `q/z` — increase/decrease speed
-
-Drive the robot slowly around the room to build the map in RViz2.
-Once you have a good map proceed to Step 6 and Step 7.
 
 ## Step 6 - Nav2
 Open a new terminal and run:
