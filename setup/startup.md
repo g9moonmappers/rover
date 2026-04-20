@@ -1,3 +1,5 @@
+# Startup Sequence
+
 ## Prerequisites
 
 ### Software
@@ -5,15 +7,16 @@ All software must be installed before running the startup sequence.
 See [installation guide](installation.md) for full instructions.
 
 ### Hardware
-- D435 plugged in via USB-A port on Jetson
-- U2D2 with all 6 motors connected via USB-A (/dev/ttyUSB0)
+- D435 plugged in via USB
+- U2D2 with all 6 motors connected via USB (/dev/ttyUSB0)
 - MPU6050 wired to Jetson GPIO I2C bus 7:
   - VCC → Pin 1 (3.3V)
   - GND → Pin 6 (GND)
   - SDA → Pin 3
   - SCL → Pin 5
 
-## Terminal 1 - Camera
+## Step 1 - Camera
+Open a new terminal and run:
 ```bash
 source /opt/ros/humble/setup.bash
 ros2 launch realsense2_camera rs_launch.py \
@@ -28,17 +31,19 @@ Wait for: `RealSense Node Is Up!`
 
 **Node: realsense2_camera_node**
 Drives the Intel RealSense D435 camera. Publishes RGB images, depth images,
-point cloud and IMU data. The point cloud must be enabled at runtime due to
-a bug in v4.57.7 — see troubleshooting guide.
+point cloud and IMU data. The point cloud must be enabled at runtime as done
+in Step 2. For more details see the [troubleshooting guide](troubleshooting.md).
 
-## Terminal 2 - Enable Point Cloud
+## Step 2 - Enable Point Cloud
+Open a new terminal and run:
 ```bash
 source /opt/ros/humble/setup.bash
 ros2 param set /camera/camera pointcloud__neon_.enable true
 ```
 Wait for: `Set parameter successful`
 
-## Terminal 3 - Motor Driver
+## Step 3 - Motor Driver
+Open a new terminal and run:
 ```bash
 source /opt/ros/humble/setup.bash
 python3 ~/dynamixel_driver.py
@@ -51,7 +56,8 @@ and converts linear/angular velocity commands into left/right motor speeds using
 the Dynamixel SDK. Also reads motor encoder positions and publishes `/odom` so
 Nav2 knows where the robot is. Broadcasts the `odom -> base_link` TF transform.
 
-## Terminal 4 - Static Transform
+## Step 4 - Static Transform
+Open a new terminal and run:
 ```bash
 source /opt/ros/humble/setup.bash
 ros2 run tf2_ros static_transform_publisher 0.0 0.0 0.2 0.0 0.0 0.0 base_link camera_link
@@ -73,8 +79,10 @@ The numbers mean:
 - `camera_link` — the child frame (camera)
 
 Change z (0.2) to the actual height of your camera above the robot base in meters.
+See [robot parameters](robot_parameters.md) for more details.
 
-## Terminal 5 - RTAB-Map
+## Step 5 - RTAB-Map
+Open a new terminal and run:
 ```bash
 source /opt/ros/humble/setup.bash
 ros2 launch rtabmap_launch rtabmap.launch.py \
@@ -106,7 +114,7 @@ RViz2 opens automatically. Set it up before continuing:
 
 ## Optional - Manual Control
 If you want to manually drive the robot to build the map before
-launching autonomous exploration, run this in a new terminal:
+launching autonomous exploration, open a new terminal and run:
 ```bash
 source /opt/ros/humble/setup.bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
@@ -121,9 +129,10 @@ Controls:
 - `q/z` — increase/decrease speed
 
 Drive the robot slowly around the room to build the map in RViz2.
-Once you have a good map proceed to Terminal 6 and Terminal 7.
+Once you have a good map proceed to Step 6 and Step 7.
 
-## Terminal 6 - Nav2
+## Step 6 - Nav2
+Open a new terminal and run:
 ```bash
 source /opt/ros/humble/setup.bash
 ros2 launch nav2_bringup navigation_launch.py \
@@ -141,7 +150,8 @@ A collection of nodes that together handle autonomous navigation:
 - **costmap** — builds a grid showing where obstacles are
 - **velocity_smoother** — smooths out jerky velocity commands
 
-## Terminal 7 - Autonomous Exploration
+## Step 7 - Autonomous Exploration
+Open a new terminal and run:
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/ros2_ws/install/setup.bash
