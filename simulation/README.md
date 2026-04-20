@@ -32,7 +32,7 @@ odom
 ## Robot Parameters
 - Wheel radius: see [dynamixel_driver.py](../code/dynamixel_driver.py)
 - Wheel separation: see [dynamixel_driver.py](../code/dynamixel_driver.py)
-- Camera height above base: 0.2 meters
+- Camera height above base: 0.2 meters (placeholder — measure the actual height on your robot)
 - Drive type: skid steer (left side: IDs 1,3,5 — right side: IDs 2,4,6)
 
 ## Camera Parameters
