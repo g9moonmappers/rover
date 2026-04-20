@@ -3,7 +3,7 @@
 ## Camera Issues
 
 ### No RealSense devices found
-- Check USB connection — must be USB 3.0
+- Check USB connection, must be a USB 3.x cable connected to one of the Jetson's USB-A ports 
 - Try unplugging and replugging the camera
 - Check: `ls /dev/video*`
 
@@ -16,7 +16,7 @@ ros2 param set /camera/camera pointcloud__neon_.enable true
 
 ### RGB and depth resolution mismatch
 RTAB-Map requires matching aspect ratios between color and depth.
-Always launch with matching profiles:
+Always launch with matching profiles, eg:
 - depth_module.depth_profile:=640x480x60
 - rgb_camera.color_profile:=640x480x60
 
