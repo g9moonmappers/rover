@@ -111,13 +111,3 @@ cd ~/ros2_ws
 colcon build
 source ~/ros2_ws/install/setup.bash
 ```
-
-## 8. explore_lite (Autonomous Exploration)
-
-```bash
-cd ~/ros2_ws/src
-git clone https://github.com/robo-friends/m-explore-ros2.git
-cd ~/ros2_ws
-colcon build
-source ~/ros2_ws/install/setup.bash
-```
