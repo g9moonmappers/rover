@@ -112,7 +112,7 @@ colcon build
 source ~/ros2_ws/install/setup.bash
 ```
 
-## 9. (Optional Manual Control)
+## 9. (Optional) Manual Control
 Only required if you want to drive the rover manually with a keyboard.
 
 ```bash
