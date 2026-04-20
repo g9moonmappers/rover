@@ -53,7 +53,7 @@ and converts linear/angular velocity commands into left/right motor speeds using
 the Dynamixel SDK. Also reads motor encoder positions and publishes `/odom` so
 Nav2 knows where the robot is. Broadcasts the `odom -> base_link` TF transform.
 
-## (Optional - Manual Control)
+## (Optional) Manual Control
 Requires `ros-humble-teleop-twist-keyboard` — see [installation guide](installation.md).
 
 To drive the rover manually, complete steps 1-3, connect a keyboard to the Jetson and do the following.
