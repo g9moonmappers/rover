@@ -1,8 +1,7 @@
 # Installation Guide
 
 ## 1. JetPack
-“Follow this guide (https://www.youtube.com/watch?v=BaRdpSXU6EM
-) and install JetPack 6.2.1 (rev. 1) on the Jetson via either an NVMe SSD (size 2280 or 2230) or an SD card. An SSD is strongly recommended. JetPack should come pre-installed with CUDA, cuDNN, TensorRT, and Ubuntu 22.04. Verify that everything is installed before continuing.
+Follow this guide (https://www.youtube.com/watch?v=BaRdpSXU6EM) and install JetPack 6.2.1 (rev. 1) on the Jetson via either an NVMe SSD (size 2280 or 2230) or an SD card. An SSD is strongly recommended. JetPack should come pre-installed with CUDA, cuDNN, TensorRT, and Ubuntu 22.04. Verify that everything is installed before continuing.
 
 ## 2. ROS2 Humble
 
