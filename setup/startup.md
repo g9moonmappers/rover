@@ -128,9 +128,9 @@ Wait for: `Managed nodes are active`
 
 **Node: nav2 (multiple nodes)**
 A collection of nodes that together handle autonomous navigation:
-- **controller_server** — sends velocity commands to `/cmd_vel`
+- **controller_server** — calculates velocity commands and sends them to `/cmd_vel` which the [dynamixel_driver](../code/dynamixel_driver.py) listens to and executes on the physical motors
 - **planner_server** — calculates the optimal path from A to B
 - **behavior_server** — handles recovery behaviors when the robot gets stuck
 - **bt_navigator** — coordinates all Nav2 nodes using a behavior tree
 - **costmap** — builds a grid showing where obstacles are
-- **velocity_smoother** — smooths out jerky velocity commands
+- **velocity_smoother** — smooths out jerky velocity commands before they reach the dynamixel_driver
