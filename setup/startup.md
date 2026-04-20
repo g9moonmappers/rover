@@ -18,7 +18,6 @@ See [installation guide](installation.md) for full instructions.
 ## Step 1 - Stereocamera D435
 Open a new terminal and run:
 ```bash
-source /opt/ros/humble/setup.bash
 ros2 launch realsense2_camera rs_launch.py \
   enable_sync:=true \
   depth_module.depth_profile:=640x480x60 \
@@ -34,7 +33,6 @@ in Step 2. For more details see the [troubleshooting guide](troubleshooting.md).
 ## Step 2 - Enable Point Cloud
 Open a new terminal and run:
 ```bash
-source /opt/ros/humble/setup.bash
 ros2 param set /camera/camera pointcloud__neon_.enable true
 ```
 Wait for: `Set parameter successful`
@@ -42,7 +40,6 @@ Wait for: `Set parameter successful`
 ## Step 3 - Motor Driver
 Open a new terminal and run:
 ```bash
-source /opt/ros/humble/setup.bash
 python3 ~/dynamixel_driver.py
 ```
 Wait for: `Robot ready!`
@@ -59,7 +56,6 @@ Requires `ros-humble-teleop-twist-keyboard` — see [installation guide](install
 To drive the rover manually, complete steps 1-3, connect a keyboard to the Jetson and do the following.
 Open a new terminal and run:
 ```bash
-source /opt/ros/humble/setup.bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
 Controls:
@@ -75,7 +71,6 @@ Skip to Step 4 for full autonomous navigation.
 ## Step 4 - Static Transform
 Open a new terminal and run:
 ```bash
-source /opt/ros/humble/setup.bash
 ros2 run tf2_ros static_transform_publisher 0.0 0.0 0.2 0.0 0.0 0.0 base_link camera_link
 ```
 
@@ -95,7 +90,6 @@ See [robot parameters](robot_parameters.md) for more details.
 ## Step 5 - RTAB-Map
 Open a new terminal and run:
 ```bash
-source /opt/ros/humble/setup.bash
 ros2 launch rtabmap_launch rtabmap.launch.py \
   rgb_topic:=/camera/camera/color/image_raw \
   depth_topic:=/camera/camera/depth/image_rect_raw \
@@ -126,7 +120,6 @@ RViz2 opens automatically. Set it up before continuing:
 ## Step 6 - Nav2
 Open a new terminal and run:
 ```bash
-source /opt/ros/humble/setup.bash
 ros2 launch nav2_bringup navigation_launch.py \
   params_file:=/opt/ros/humble/share/nav2_bringup/params/nav2_params.yaml \
   use_sim_time:=false
