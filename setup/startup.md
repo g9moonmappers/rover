@@ -5,8 +5,8 @@ All software must be installed before running the startup sequence.
 See [installation guide](installation.md) for full instructions.
 
 ### Hardware
-- D435 plugged in via USB
-- U2D2 with all 6 motors connected via USB (/dev/ttyUSB0)
+- D435 plugged in via USB-A port on Jetson
+- U2D2 with all 6 motors connected via USB-A (/dev/ttyUSB0)
 - MPU6050 wired to Jetson GPIO I2C bus 7:
   - VCC → Pin 1 (3.3V)
   - GND → Pin 6 (GND)
