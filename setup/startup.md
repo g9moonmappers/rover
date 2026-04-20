@@ -3,7 +3,7 @@
 ## Prerequisites
 
 ### Software
-All software must be installed before running the startup sequence.
+All non-optional software must be installed before running the startup sequence.
 See [installation guide](installation.md) for full instructions.
 
 ### Hardware
@@ -52,6 +52,25 @@ Custom node that links Nav2 and the dynamixel motors. Subscribes to `/cmd_vel`
 and converts linear/angular velocity commands into left/right motor speeds using
 the Dynamixel SDK. Also reads motor encoder positions and publishes `/odom` so
 Nav2 knows where the robot is. Broadcasts the `odom -> base_link` TF transform.
+
+## (Optional - Manual Control)
+Requires `ros-humble-teleop-twist-keyboard` — see [installation guide](installation.md).
+
+To drive the rover manually, complete steps 1-3, connect a keyboard to the Jetson and do the following.
+Open a new terminal and run:
+```bash
+source /opt/ros/humble/setup.bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
+Controls:
+- `i` — forward
+- `,` — backward
+- `j` — turn left
+- `l` — turn right
+- `k` — stop
+- `q/z` — increase/decrease speed
+
+Skip to Step 4 for full autonomous navigation.
 
 ## Step 4 - Static Transform
 Open a new terminal and run:
@@ -104,21 +123,6 @@ RViz2 opens automatically. Set it up before continuing:
 - Add → By topic → `/map` → Map → OK
 - Add → By topic → `/camera/camera/depth/color/points` → PointCloud2 → OK
 
-## (Optional - Manual Control)
-If you want to manually drive the robot using a keyboard, open a new terminal and run:
-```bash
-source /opt/ros/humble/setup.bash
-ros2 run teleop_twist_keyboard teleop_twist_keyboard
-```
-
-Controls:
-- `i` — forward
-- `,` — backward
-- `j` — turn left
-- `l` — turn right
-- `k` — stop
-- `q/z` — increase/decrease speed
-
 ## Step 6 - Nav2
 Open a new terminal and run:
 ```bash
@@ -137,19 +141,3 @@ A collection of nodes that together handle autonomous navigation:
 - **bt_navigator** — coordinates all Nav2 nodes using a behavior tree
 - **costmap** — builds a grid showing where obstacles are
 - **velocity_smoother** — smooths out jerky velocity commands
-
-## Step 7 - Autonomous Exploration
-Open a new terminal and run:
-```bash
-source /opt/ros/humble/setup.bash
-source ~/ros2_ws/install/setup.bash
-ros2 launch explore_lite explore.launch.py
-```
-
-**Node: explore_lite**
-Autonomous exploration node. Looks at the current map, finds unexplored
-frontier areas and sends navigation goals to Nav2 to explore them.
-The robot drives itself around the room until the full map is built.
-
-Once the full room is mapped you can send specific navigation goals
-by clicking **2D Nav Goal** in RViz2 and clicking anywhere on the map.
