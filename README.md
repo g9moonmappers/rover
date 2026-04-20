@@ -12,7 +12,7 @@ Documentation for all software used by bachelor group 9 (MoonMappers) at USN Kon
   - Left side: IDs 1, 3, 5
   - Right side: IDs 2, 4, 6
 
-## Software Stack
+## Software
 - **OS:** Jetpack 6.2.1 (rev.1) / Ubuntu 22.04
 - **ROS2:** Humble
 - **SLAM:** RTAB-Map + Rviz
