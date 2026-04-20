@@ -23,12 +23,11 @@ The simulation needs a depth camera that publishes:
 ### TF Frames (replaces Step 4)
 The simulation must publish these exact TF frame names:
 ```
-map
-└── odom
-    └── base_link
-        └── camera_link
-            ├── camera_color_optical_frame
-            └── camera_depth_optical_frame
+odom
+└── base_link
+    └── camera_link
+        ├── camera_color_optical_frame
+        └── camera_depth_optical_frame
 ```
 ## Robot Parameters
 - Wheel radius: see [dynamixel_driver.py](../code/dynamixel_driver.py)
