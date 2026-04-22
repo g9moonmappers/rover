@@ -96,7 +96,7 @@ ros2 launch rtabmap_launch rtabmap.launch.py \
   camera_info_topic:=/camera/camera/color/camera_info \
   frame_id:=base_link \
   odom_frame_id:=odom \
-  approx_sync:=false \
+  approx_sync:=true \
   visual_odometry:=false \
   icp_odometry:=false \
   Odom/MinInliers:=8 \
