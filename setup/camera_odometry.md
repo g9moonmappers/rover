@@ -40,7 +40,7 @@ Open a new terminal and run:
 ```bash
 rm ~/.ros/rtabmap.db
 ```
-This will delete the previous map
+This will delete the old map
 
 Then in the same terminal, run: 
 ```bash
