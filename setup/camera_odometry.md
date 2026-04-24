@@ -9,7 +9,15 @@ Used as input for a Kalman filter or other position estimation systems.
 - realsense2_camera installed
 - rtabmap_ros installed
 
-## Step 1 - Camera
+## Step 1 - Testing camera connection
+Open a new terminal and run:
+```bash
+realsense-viewer
+```
+In the upper left corner it should say: `Intel RealSense D435 3.2` and `If it says 2.x, reconnect the camera until it says 3.2`
+
+
+## Step 2 - Camera
 Open a new terminal and run:
 ```bash
 ros2 launch realsense2_camera rs_launch.py \
@@ -19,14 +27,14 @@ ros2 launch realsense2_camera rs_launch.py \
 ```
 Wait for: `RealSense Node Is Up!` and `Device USB type: 3.2`
 
-## Step 2 - Enable Point Cloud
+## Step 3 - Enable Point Cloud
 Open a new terminal and run:
 ```bash
 ros2 param set /camera/camera pointcloud__neon_.enable true
 ```
 Wait for: `Set parameter successful`
 
-## Step 3 - RTAB-Map
+## Step 4 - RTAB-Map
 Open a new terminal and run:
 ```bash
 ros2 launch rtabmap_launch rtabmap.launch.py \
@@ -42,11 +50,12 @@ ros2 launch rtabmap_launch rtabmap.launch.py \
   Odom/ResetCountdown:=1
 ```
 
-## Step 4 - Odometry Reader
+## Step 5 - Odometry Reader
 Open a new terminal and run:
 ```bash
 python3 ~/camera_odom.py
 ```
+To edit the code, type: `sudo nano camera_odom.py and save by doing ctrl+o --> enter --> ctrl+x`
 
 Move the camera slowly and position data will print continuously.
 When tracking is lost it prints a warning and skips that frame.
