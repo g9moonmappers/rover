@@ -15,7 +15,7 @@ Open a new terminal and run:
 realsense-viewer
 ```
 In the upper left corner it should say: `Intel RealSense D435 3.2` and `If it says 2.x, reconnect the camera until it says 3.2`
-
+When you see `Intel RealSense D435 3.2` in the upper left corner, you can close realsense-viewer 
 
 ## Step 2 - Camera
 Open a new terminal and run:
