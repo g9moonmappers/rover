@@ -38,6 +38,12 @@ Wait for: `Set parameter successful`
 ## Step 4 - RTAB-Map
 Open a new terminal and run:
 ```bash
+rm ~/.ros/rtabmap.db
+```
+This will delete the previous map
+
+Then in the same terminal, run: 
+```bash
 ros2 launch rtabmap_launch rtabmap.launch.py \
   rgb_topic:=/camera/camera/color/image_raw \
   depth_topic:=/camera/camera/depth/image_rect_raw \
