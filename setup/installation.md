@@ -111,9 +111,71 @@ colcon build
 source ~/ros2_ws/install/setup.bash
 ```
 
-## 9. (Optional) Manual Control
+## 10. Frontier Exploration
+Clone and build:
+```bash
+cd ~/ros2_ws/src
+git clone https://github.com/mertgulerx/frontier_exploration_ros2.git
+cd ~/ros2_ws
+rosdep install --from-paths src --ignore-src -r -y
+```
+
+Fix Humble compatibility:
+```bash
+nano ~/ros2_ws/src/frontier_exploration_ros2/src/frontier_explorer_node.cpp
+```
+Find line 1195 and comment out these two lines:
+```cpp
+// error_code = wrapped_result.result->error_code;
+// error_msg = wrapped_result.result->error_msg;
+```
+
+Configure for our robot:
+```bash
+nano ~/ros2_ws/src/frontier_exploration_ros2/config/params.yaml
+```
+Make these changes:
+```yaml
+map_topic: /rtabmap/map        # Where to get the map from RTAB-Map
+robot_base_frame: base_link    # Our robot uses base_link not base_footprint
+
+# How often the explorer can switch to a better frontier (seconds)
+# Too low = robot keeps spinning and replanning instead of driving
+# Too high = robot stays committed to a bad frontier too long
+goal_preemption_min_interval_s: 5.0
+
+# Treat the frontier as reached when within this distance (meters)
+# Too low = robot gets stuck trying to reach exact point
+# Too high = robot stops too early and misses area
+goal_preemption_complete_if_within_m: 0.25
+
+# Minimum frontier size in map cells before it is worth visiting
+# Too low = robot chases tiny noise in the map and wastes time
+# Too high = robot misses narrow corridors and doorways
+min_frontier_size_cells: 5
+
+# Exploration strategy
+# nearest = goes to closest frontier, simple and predictable
+# mrtsp = plans optimal order to visit all frontiers, more efficient
+strategy: mrtsp
+```
+
+Build:
+```bash
+cd ~/ros2_ws
+colcon build --packages-select frontier_exploration_ros2
+source ~/ros2_ws/install/setup.bash
+```
+
+## 11. Map Relay
+```bash
+sudo apt install ros-humble-topic-tools
+```
+
+## 12. (Optional) Manual Control
 Only required if you want to drive the rover manually with a keyboard.
 
 ```bash
 sudo apt install ros-humble-teleop-twist-keyboard
 ```
+
