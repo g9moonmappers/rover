@@ -111,7 +111,7 @@ colcon build
 source ~/ros2_ws/install/setup.bash
 ```
 
-## 10. Frontier Exploration
+## 10. Autonomous driving (Frontier Exploration)
 Clone and build:
 ```bash
 cd ~/ros2_ws/src
@@ -120,7 +120,7 @@ cd ~/ros2_ws
 rosdep install --from-paths src --ignore-src -r -y
 ```
 
-Fix Humble compatibility:
+Fix ROS2 Humble compatibility:
 ```bash
 nano ~/ros2_ws/src/frontier_exploration_ros2/src/frontier_explorer_node.cpp
 ```
