@@ -51,7 +51,7 @@ class Robot(Node):
             self.get_logger().error('Failed to open port!')
             return
         portHandler.setBaudRate(57600)
-        self.ser = serial.Serial('/dev/ttyACM0', 38400, timeout=0.1)
+        self.ser = serial.Serial('/dev/ttyACM0', 38400, timeout=0.005)
 
         for id in [dxl_id1, dxl_id2, dxl_id3, dxl_id4, dxl_id5, dxl_id6]:
             packetHandler.write1ByteTxRx(
@@ -99,7 +99,7 @@ class Robot(Node):
              print("WARNING: Tracking lost - skipping this measurement")
              return
 
-         print(f"Position -> x: {x:.3f}  y: {y:.3f}  z: {z:.3f}")
+         print(f"Position -> x: {self.cam_x:.3f}  y: {self.cam_y:.3f}")
 
 
     def read_ekf(self):
