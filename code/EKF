@@ -51,7 +51,7 @@ class Robot(Node):
             self.get_logger().error('Failed to open port!')
             return
         portHandler.setBaudRate(57600)
-        self.ser = serial.Serial('/dev/ttyACM0', 38400, timeout=0.005)
+        self.ser = serial.Serial('/dev/ttyACM0', 38400, timeout=0.05)
 
         for id in [dxl_id1, dxl_id2, dxl_id3, dxl_id4, dxl_id5, dxl_id6]:
             packetHandler.write1ByteTxRx(
@@ -99,7 +99,7 @@ class Robot(Node):
              print("WARNING: Tracking lost - skipping this measurement")
              return
 
-         print(f"Position -> x: {self.cam_x:.3f}  y: {self.cam_y:.3f}")
+         #print(f"Position -> x: {self.cam_x:.3f}  y: {self.cam_y:.3f}")
 
 
     def read_ekf(self):
@@ -198,6 +198,7 @@ class Robot(Node):
         self.send_velocity(-left_vel, -right_vel)
         self.get_logger().info(f'Left: {left_vel} Right: {right_vel}')
 
+
     def update_odom(self):
         now = self.get_clock().now()
         dt = (now - self.last_time).nanoseconds / 1e9
@@ -208,10 +209,12 @@ class Robot(Node):
 
         # sender hjulhastigheteer til KF på arudino
         self.ser.write(f"{wl:.4f},{wr:.4f},{self.cam_x:.3f},{self.cam_y:.3f}\n".encode())
-
+        self.ser.reset_input_buffer()
         ekf = self.read_ekf()  # leser ekf tilstander
+        self.ser.flush()
         if ekf is not None:
             self.x, self.y, self.theta = ekf
+            print(f"Position -> x: {self.x:.3f}  y: {self.y:.3f}")
 
         t = TransformStamped()
         t.header.stamp = now.to_msg()
