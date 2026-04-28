@@ -98,7 +98,7 @@ class Robot(Node):
         left_vel  = max(-MAX_VEL, min(MAX_VEL, int(left_vel)))
         right_vel = max(-MAX_VEL, min(MAX_VEL, int(right_vel)))
 
-        self.send_velocity(-left_vel, -right_vel)
+        self.send_velocity(-left_vel, right_vel)
         self.get_logger().info(f'Left: {left_vel} Right: {right_vel}')
 
     def update_odom(self):
