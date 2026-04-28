@@ -151,8 +151,8 @@ class Robot(Node):
         groupBulkWrite.clearParam()
 
     def cmd_vel(self, msg):
-        linear = 0.2
-        angular = math.pi / 2
+        linear = msg.linear.x
+        angular = msg.angular.z
 
         left_vel  = (linear - angular * WHEEL_SEPARATION_METERS / 2) * MAX_VEL
         right_vel = (linear + angular * WHEEL_SEPARATION_METERS / 2) * MAX_VEL
