@@ -9,13 +9,11 @@ See [installation guide](installation.md) for full instructions.
 ### Hardware
 - D435 plugged into a **USB 3.0 port** on the Jetson — check for `Device USB type: 3.2` in Step 1 output.
   If you get `2.1` the JetsonHacks kernel modules need to be reinstalled — see [troubleshooting guide](troubleshooting.md).
-- U2D2 with all 6 motors connected via USB-A (/dev/ttyUSB0)
+- U2D2 with all 6 motors connected via USB-A (`/dev/ttyUSB0`)
 - All 6 Dynamixel motors powered on
-- MPU6050 wired to Jetson GPIO I2C bus 7:
-  - VCC → Pin 1 (3.3V)
-  - GND → Pin 6 (GND)
-  - SDA → Pin 3
-  - SCL → Pin 5
+- Arduino Mega connected via USB (`/dev/ttyACM0`) with `ekf.ino` flashed
+  - MPU6050 wired to Arduino I2C (SDA/SCL)
+  - BU04 UWB modules connected to Arduino Serial2 (pins 16/17)
 
 ## Step 1 - Camera
 Open a new terminal and run:
@@ -39,18 +37,23 @@ ros2 param set /camera/camera pointcloud__neon_.enable true
 ```
 Wait for: `Set parameter successful`
 
-## Step 3 - Motor Driver
+## Step 3 - Motor Driver and EKF
 Open a new terminal and run:
 ```bash
-python3 ~/dynamixel_driver.py
+python3 ~/robot.py
 ```
 Wait for: `Robot ready!`
 
-**Node: [dynamixel_driver](../code/dynamixel_driver.py)**
-Custom node that links Nav2 and the Dynamixel motors. Subscribes to `/cmd_vel`
-and converts linear/angular velocity commands into left/right motor speeds using
-the Dynamixel SDK. Also reads motor encoder positions and publishes `/odom` so
-Nav2 knows where the robot is. Broadcasts the `odom -> base_link` TF transform.
+**Node: robot**
+Reads wheel encoder positions from all 6 Dynamixel motors and computes wheel
+velocities. Sends velocities to the Arduino over USB serial (`/dev/ttyACM0`).
+The Arduino runs an Extended Kalman Filter fusing:
+- Wheel odometry from the Dynamixel encoders
+- IMU gyroscope from the MPU6050
+- UWB position from BU04 trilateration (when anchors are configured)
+
+The filtered position is sent back to the Jetson and published as `/odom`
+for RTAB-Map and Nav2. Also broadcasts the `odom -> base_link` TF transform.
 
 ## (Optional) Manual Control
 Requires `ros-humble-teleop-twist-keyboard` — see [installation guide](installation.md).
@@ -145,12 +148,12 @@ Wait for: `Managed nodes are active`
 
 **Node: nav2 (multiple nodes)**
 A collection of nodes that together handle autonomous navigation:
-- **controller_server** — calculates velocity commands and sends them to `/cmd_vel` which the [dynamixel_driver](../code/dynamixel_driver.py) listens to and executes on the Dynamixel motors
+- **controller_server** — calculates velocity commands and sends them to `/cmd_vel` which `robot.py` listens to and executes on the Dynamixel motors
 - **planner_server** — calculates the optimal path from A to B
 - **behavior_server** — handles recovery behaviors when the robot gets stuck
 - **bt_navigator** — coordinates all Nav2 nodes using a behavior tree
 - **costmap** — builds a grid showing where obstacles are using the point cloud from the camera
-- **velocity_smoother** — smooths out jerky velocity commands before they reach the dynamixel_driver
+- **velocity_smoother** — smooths out jerky velocity commands before they reach the motors
 
 ## Step 8 - Initial Spin
 Open a new terminal and run:
@@ -158,17 +161,20 @@ Open a new terminal and run:
 ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0}, angular: {z: 0.3}}" &
 sleep 22
 kill %1
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0}, angular: {z: 0.0}}"
 ```
 
 Spins the robot 360° to build an initial map in all directions before
-autonomous exploration starts. Wait for the full 22 seconds to complete
-before moving to Step 9.
+autonomous exploration starts. Wait for the full spin to complete before
+moving to Step 9. Adjust the sleep value based on how long a full rotation
+takes on your robot.
 
 ## Step 9 - Autonomous Exploration
 Open a new terminal and run:
 ```bash
 source ~/ros2_ws/install/setup.bash
-ros2 launch frontier_exploration_ros2 frontier_explorer.launch.py
+ros2 launch frontier_exploration_ros2 frontier_explorer.launch.py \
+  params_file:=$(ros2 pkg prefix frontier_exploration_ros2)/share/frontier_exploration_ros2/config/params.yaml
 ```
 
 **Node: frontier_explorer**
