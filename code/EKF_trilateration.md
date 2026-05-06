@@ -152,8 +152,18 @@ float M; //metall ID signal (0 elelr 1)
       0.0, 0.0, m_teta*m_teta,
     };
 
+    // venter til bu04 gir data
+    while (!new_position) {
+        read_uwb();
+        delay(10);
+    }
+
+    K.x(0) = x_uwb;
+    K.x(1) = y_uwb;
+    K.x(2) = 0.0;
+    new_position = false;
+
     T = micros();
-    read_uwb();
 
   }
 
@@ -386,8 +396,7 @@ bool parseUwbData(uint8_t* buffer, int length, float* distances) {
 }
 
 float get_wl_o() { return wl_received; }
-float get_wr_o() { return wr_received; }
-```
+float get_wr_o() { return wr_received; }```
 
 ---
 
