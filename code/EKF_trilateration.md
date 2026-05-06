@@ -62,14 +62,14 @@ float M; //metall ID signal (0 elelr 1)
 
 
   //sensorstøy
-  #define n_x 1 //10 avvik på posisjon
-  #define n_y 1 //10 avvik på posisjon
-  #define n_teta 0.5 //0.01 rad avvik på teta (endre?)
+  #define n_x 0.1 //10 avvik på posisjon
+  #define n_y 0.1 //10 avvik på posisjon
+  #define n_teta 0.1 //0.01 rad avvik på teta (endre?)
 
   //systemstøy
-  #define m_x 0.01
-  #define m_y 0.01
-  #define m_teta 0.02
+  #define m_x 0.1
+  #define m_y 0.1
+  #define m_teta 0.1
 
 
 
@@ -399,6 +399,7 @@ float get_wl_o() { return wl_received; }
 float get_wr_o() { return wr_received; }```
 
 ---
+
 
 ## Python — `robot.py`
 
