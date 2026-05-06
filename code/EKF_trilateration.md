@@ -214,7 +214,7 @@ float M; //metall ID signal (0 elelr 1)
 
 
     //sender data over zulu til en ekstern PC
-    if (new_metal = true){
+    if (new_metal == true){
       Serial3.print(K.x(0));
       Serial3.print(" ");
       Serial3.print(K.x(1));
@@ -382,8 +382,6 @@ import serial
 portHandler = PortHandler("/dev/ttyUSB0")
 packetHandler = PacketHandler(2.0)
 
-
-
 mode_adresse = 11
 torque_on_address = 64
 goal_velocity_adresse = 104
@@ -405,7 +403,6 @@ MAX_VEL = 460
 WHEEL_RADIUS_METERS = 0.05
 WHEEL_SEPARATION_METERS = 0.29
 
-
 groupBulkWrite = GroupBulkWrite(portHandler, packetHandler)
 
 
@@ -417,24 +414,11 @@ class Robot(Node):
             self.get_logger().error('Failed to open port!')
             return
         portHandler.setBaudRate(57600)
-        self.ser = serial.Serial('/dev/ttyACM0', 38400, timeout=0.1)
+        self.ser = serial.Serial('/dev/ttyACM0', 38400, timeout=0.01)  # 10ms max, non-blocking
 
         for id in [dxl_id1, dxl_id2, dxl_id3, dxl_id4, dxl_id5, dxl_id6]:
-            packetHandler.write1ByteTxRx(
-                portHandler, id, mode_adresse, velocity_mode)
-            packetHandler.write1ByteTxRx(
-                portHandler, id, torque_on_address, T_ON)
-            
-        # hvis du vil ha posisjon fra kamera odom
-        # self.create_subscription(
-        #     Odometry,
-        #     '/rtabmap/odom',
-        #     self.odom_callback,
-        #     10)
-        
-            # hvis du vil ha posisjon fra kamera odom        
-        # self.cam_x = 0
-        # self.cam_y = 0
+            packetHandler.write1ByteTxRx(portHandler, id, mode_adresse, velocity_mode)
+            packetHandler.write1ByteTxRx(portHandler, id, torque_on_address, T_ON)
 
         self.x = 0.0
         self.y = 0.0
@@ -449,30 +433,8 @@ class Robot(Node):
         self.create_timer(0.02, self.update_odom)
 
         self.get_logger().info('Robot ready!')
-      
-        
-    # hvis du vil ha posisjon fra kamera odom
-    # def odom_callback(self, msg):
-         
-    #      self.cam_x = msg.pose.pose.position.x
-    #      self.cam_y = msg.pose.pose.position.y
-
-    #      # qx = msg.pose.pose.orientation.x
-    #      # qy = msg.pose.pose.orientation.y
-    #      # qz = msg.pose.pose.orientation.z
-    #      # qw = msg.pose.pose.orientation.w
-
-    #      # Check covariance - high value means tracking lost
-    #      covariance = msg.pose.covariance[0]
-    #      if covariance > 9000:
-    #          print("WARNING: Tracking lost - skipping this measurement")
-    #          return
-
-    #      print(f"Position -> x: {x:.4f}  y: {y:.4f}  z: {z:.4f}")
-
 
     def read_ekf(self):
-        line = ""
         try:
             line = self.ser.readline().decode().strip()
             if not line.startswith("S:"):
@@ -481,8 +443,6 @@ class Robot(Node):
             return float(parts[0]), float(parts[1]), float(parts[2])
         except:
             return None
-        
-        
 
     def read_motor_velocities(self, dt):
         lp1 = self.read_pos(dxl_id1)
@@ -491,16 +451,16 @@ class Robot(Node):
         rp4 = self.read_pos(dxl_id4)
         lp5 = self.read_pos(dxl_id5)
         rp6 = self.read_pos(dxl_id6)
-        
-        
+
         avg_left  = (lp1 + lp3 + lp5) / 3
         avg_right = (rp2 + rp4 + rp6) / 3
-    
+
         ld = (avg_left  - self.last_left)  / 4096 * 2 * math.pi * WHEEL_RADIUS_METERS
         rd = -(avg_right - self.last_right) / 4096 * 2 * math.pi * WHEEL_RADIUS_METERS
-    
-        self.last_left  = avg_left  
+
+        self.last_left  = avg_left
         self.last_right = avg_right
+
         if dt <= 0:
             return 0.0, 0.0
 
@@ -510,8 +470,7 @@ class Robot(Node):
         return wl, wr
 
     def read_pos(self, id):
-        pos, res, err = packetHandler.read4ByteTxRx(
-            portHandler, id, present_position_adresse)
+        pos, res, err = packetHandler.read4ByteTxRx(portHandler, id, present_position_adresse)
         if pos > 2147483648:
             pos -= 4294967296
         return pos
@@ -530,29 +489,18 @@ class Robot(Node):
             DXL_HIBYTE(DXL_HIWORD(target_velocityV))
         ]
 
-        groupBulkWrite.addParam(
-            dxl_id1, goal_velocity_adresse, 4, param_goal_velocity_V)
-        groupBulkWrite.addParam(
-            dxl_id3, goal_velocity_adresse, 4, param_goal_velocity_V)
-        groupBulkWrite.addParam(
-            dxl_id5, goal_velocity_adresse, 4, param_goal_velocity_V)
-        groupBulkWrite.addParam(
-            dxl_id2, goal_velocity_adresse, 4, param_goal_velocity_H)
-        groupBulkWrite.addParam(
-            dxl_id4, goal_velocity_adresse, 4, param_goal_velocity_H)
-        groupBulkWrite.addParam(
-            dxl_id6, goal_velocity_adresse, 4, param_goal_velocity_H)
+        groupBulkWrite.addParam(dxl_id1, goal_velocity_adresse, 4, param_goal_velocity_V)
+        groupBulkWrite.addParam(dxl_id3, goal_velocity_adresse, 4, param_goal_velocity_V)
+        groupBulkWrite.addParam(dxl_id5, goal_velocity_adresse, 4, param_goal_velocity_V)
+        groupBulkWrite.addParam(dxl_id2, goal_velocity_adresse, 4, param_goal_velocity_H)
+        groupBulkWrite.addParam(dxl_id4, goal_velocity_adresse, 4, param_goal_velocity_H)
+        groupBulkWrite.addParam(dxl_id6, goal_velocity_adresse, 4, param_goal_velocity_H)
         groupBulkWrite.txPacket()
         groupBulkWrite.clearParam()
 
     def cmd_vel(self, msg):
-
-        # disse skal bli satt av nav2
         linear = msg.linear.x
         angular = msg.angular.z
-        
-        # linear = 0.2
-        # angular = math.pi / 2
 
         left_vel = (linear - angular * WHEEL_SEPARATION_METERS / 2) * MAX_VEL
         right_vel = (linear + angular * WHEEL_SEPARATION_METERS / 2) * MAX_VEL
@@ -568,15 +516,13 @@ class Robot(Node):
         dt = (now - self.last_time).nanoseconds / 1e9
 
         wl, wr = self.read_motor_velocities(dt)
-
         self.last_time = now
 
-        # sender hjulhastigheteer til KF på arudino
+        # Send wheel velocities to Arduino EKF
         self.ser.write(f"{wl:.4f},{wr:.4f}\n".encode())
-        
-        
-        self.ser.reset_input_buffer()
-        ekf = self.read_ekf()  # leser ekf tilstander
+
+        # Read EKF state back (no reset_input_buffer — avoids stalling TF)
+        ekf = self.read_ekf()
         if ekf is not None:
             self.x, self.y, self.theta = ekf
 
@@ -589,7 +535,7 @@ class Robot(Node):
         t.transform.rotation.z = math.sin(self.theta / 2)
         t.transform.rotation.w = math.cos(self.theta / 2)
         self.tf.sendTransform(t)
-    
+
         o = Odometry()
         o.header.stamp = now.to_msg()
         o.header.frame_id = 'odom'
@@ -598,7 +544,7 @@ class Robot(Node):
         o.pose.pose.position.y = self.y
         o.pose.pose.orientation.z = math.sin(self.theta / 2)
         o.pose.pose.orientation.w = math.cos(self.theta / 2)
-        o.twist.twist.linear.x = (wl + wr) / 2 * WHEEL_RADIUS_METERS  
+        o.twist.twist.linear.x = (wl + wr) / 2 * WHEEL_RADIUS_METERS
         o.twist.twist.angular.z = (wr - wl) * WHEEL_RADIUS_METERS / WHEEL_SEPARATION_METERS
         self.odom_pub.publish(o)
 
@@ -606,8 +552,7 @@ class Robot(Node):
         self.send_velocity(0, 0)
         self.ser.close()
         for id in [dxl_id1, dxl_id2, dxl_id3, dxl_id4, dxl_id5, dxl_id6]:
-            packetHandler.write1ByteTxRx(
-                portHandler, id, torque_on_address, T_OFF)
+            packetHandler.write1ByteTxRx(portHandler, id, torque_on_address, T_OFF)
         portHandler.closePort()
         super().destroy_node()
 
