@@ -44,3 +44,41 @@ configureBU04(0, 0, 1, 1);
 ## Physical Placement
 
 Place anchors at the four corners of the room/container:
+
+```
+BS1 (0, y) -------- BS3 (x, y)
+|                            |
+|                            |
+BS0 (0, 0) -------- BS2 (x, 0)
+```
+
+Measure x and y in metres from the BS0 corner and update `BS[4][2]` in `trilateration.ino`.
+
+## Calibration
+
+1. Flash `calibration/calibration.ino` to the Mega
+2. Place tag at each distance (100mm to 1500mm in 100mm steps)
+3. Send any character in Serial Monitor to advance to next step
+4. Paste results into Google Sheets, plot measured vs actual
+5. Get slope and intercept from trendline
+6. Update `CALIB_SLOPE` and `CALIB_INTERCEPT` in `trilateration/trilateration.ino`
+7. Repeat until trendline is ~1.0*x + 0
+
+## Visualisation
+
+1. Flash `trilateration/trilateration.ino` to Mega
+2. Close Arduino Serial Monitor
+3. Open `visualisation/visualisation.pde` in Processing IDE
+4. Set correct COM port and base station positions
+5. Run — circles show distances from each anchor, dot shows tag position
+
+## Output Format
+
+Serial output at 115200 baud:
+
+```
+x,y,dist0,dist1,dist2,dist3
+```
+
+- x, y: tag position in metres
+- dist0-3: calibrated distance to each base station in metres
