@@ -2,9 +2,9 @@
 
 const float BS[4][2] = {
   {0.0,   0.0},    // BS0 - lower left
-  {0.0,   0.0},  // BS1 - upper left
-  {0.0, 0.0},    // BS2 - lower right
-  {0.0, 0.0},  // BS3 - upper right
+  {0.0,   2.208},  // BS1 - upper left
+  {2.404, 0.0},    // BS2 - lower right
+  {2.404, 2.208},  // BS3 - upper right
 };
 
 const float CALIB_SLOPE[4]     = {1.0499, 1.0499, 1.0416, 1.0478};
@@ -58,8 +58,8 @@ bool trilaterate(float* distances, float* x, float* y) {
   float det = ATA[0][0]*ATA[1][1] - ATA[0][1]*ATA[1][0];
   if (fabs(det) < 1e-6) return false;
 
-  *x = (ATb[0]*ATA[1][1] - ATb[1]*ATA[0][1]) / det;
-  *y = (ATA[0][0]*ATb[1] - ATA[1][0]*ATb[0]) / det;
+  *x = -(ATb[0]*ATA[1][1] - ATb[1]*ATA[0][1]) / det;
+  *y = -(ATA[0][0]*ATb[1] - ATA[1][0]*ATb[0]) / det;
   return true;
 }
 
