@@ -62,14 +62,14 @@ float M; //metall ID signal (0 elelr 1)
 
 
   //sensorstøy
-  #define n_x 0.5 //10 avvik på posisjon
-  #define n_y 0.5 //10 avvik på posisjon
-  #define n_teta 0.2 //0.01 rad avvik på teta (endre?)
+  #define n_x 1 //10 avvik på posisjon
+  #define n_y 1 //10 avvik på posisjon
+  #define n_teta 0.5 //0.01 rad avvik på teta (endre?)
 
   //systemstøy
-  #define m_x 0.1
-  #define m_y 0.1
-  #define m_teta 0.2
+  #define m_x 0.01
+  #define m_y 0.01
+  #define m_teta 0.02
 
 
 
@@ -85,6 +85,9 @@ float M; //metall ID signal (0 elelr 1)
     {2.404, 0}, //2
     {2.404, 2.208}, //3
   };
+
+  const float CALIB_SLOPE[4]     = {1.0499, 1.0499, 1.0416, 1.0478};
+  const float CALIB_INTERCEPT[4] = {452.6,  452.6,  381.7,  262.0 };
 
 
   unsigned long T; //nåværende tid
@@ -164,8 +167,6 @@ float M; //metall ID signal (0 elelr 1)
 
     float teta = K.x(2);
 
-
-
    if (new_position) {
     obs(0) = x_uwb;
     obs(1) = y_uwb;
@@ -212,9 +213,9 @@ float M; //metall ID signal (0 elelr 1)
     Serial.print(",");
     Serial.println(K.x(2), 4);
 
-
+/*
     //sender data over zulu til en ekstern PC
-    if (new_metal == true){
+    if (new_metal = true){
       Serial3.print(K.x(0));
       Serial3.print(" ");
       Serial3.print(K.x(1));
@@ -250,7 +251,7 @@ float M; //metall ID signal (0 elelr 1)
       Serial3.println(Ib);
       new_metal = false;    // HUSK Å SETT TIL TRUE 
     }
-    
+    */
 
     //Serial.print(",");
     //Serial.println(obs(2));
@@ -331,33 +332,58 @@ void read_uwb(){
 }
 
 bool trilaterate(float* distances, float* x, float* y) {
-  float x1=BS[0][0], y1=BS[0][1], r1=distances[0];
-  float A[3][2], b[3];
-  int equationCount=0;
-  for (int i=1; i<4&&equationCount<3; i++) {
-    if (distances[i] < 0) continue;
-    A[equationCount][0]=2*(BS[i][0]-x1); A[equationCount][1]=2*(BS[i][1]-y1);
-    b[equationCount]=distances[i]*distances[i]-r1*r1-BS[i][0]*BS[i][0]+x1*x1-BS[i][1]*BS[i][1]+y1*y1;
-    equationCount++;
+  struct ValidData { float x, y, dist; };
+  ValidData valid[4];
+  int count = 0;
+  for (int i=0; i<4; i++) {
+    if (distances[i] > 0)
+      valid[count++] = {BS[i][0], BS[i][1], distances[i]};
   }
-  if (equationCount < 2) return false;
-  float det = A[0][0]*A[1][1] - A[0][1]*A[1][0];
+  if (count < 3) return false;
+
+  float x1=valid[0].x, y1=valid[0].y, r1=valid[0].dist;
+  int eq = count - 1;
+  float A[3][2], b[3];
+  for (int i=0; i<eq; i++) {
+    A[i][0] = 2*(valid[i+1].x - x1);
+    A[i][1] = 2*(valid[i+1].y - y1);
+    b[i] = valid[i+1].dist*valid[i+1].dist - r1*r1
+           - valid[i+1].x*valid[i+1].x + x1*x1
+           - valid[i+1].y*valid[i+1].y + y1*y1;
+  }
+
+  float ATA[2][2] = {0}, ATb[2] = {0};
+  for (int i=0; i<eq; i++) {
+    ATA[0][0] += A[i][0]*A[i][0];
+    ATA[0][1] += A[i][0]*A[i][1];
+    ATA[1][0] += A[i][1]*A[i][0];
+    ATA[1][1] += A[i][1]*A[i][1];
+    ATb[0]    += A[i][0]*b[i];
+    ATb[1]    += A[i][1]*b[i];
+  }
+
+  float det = ATA[0][0]*ATA[1][1] - ATA[0][1]*ATA[1][0];
   if (fabs(det) < 1e-6) return false;
-  *x = (b[0]*A[1][1] - b[1]*A[0][1]) / det;
-  *y = (A[0][0]*b[1] - A[1][0]*b[0]) / det;
+
+  *x = -(ATb[0]*ATA[1][1] - ATb[1]*ATA[0][1]) / det;
+  *y = -(ATA[0][0]*ATb[1] - ATA[1][0]*ATb[0]) / det;
   return true;
 }
+
 
 bool parseUwbData(uint8_t* buffer, int length, float* distances) {
   if (length < 35 || buffer[0]!=0xAA || buffer[1]!=0x25 || buffer[2]!=0x01) return false;
   for (int i=0; i<4; i++) {
     int offset = 3 + i*4;
     uint32_t raw = buffer[offset] | (buffer[offset+1]<<8) | (buffer[offset+2]<<16) | (buffer[offset+3]<<24);
-    distances[i] = raw > 0 ? raw/1000.0 : -1.0;
+    if (raw > 0) {
+      distances[i] = ((float)raw - CALIB_INTERCEPT[i]) / CALIB_SLOPE[i] / 1000.0;
+    } else {
+      distances[i] = -1.0;
+    }
   }
   return true;
 }
-
 
 float get_wl_o() { return wl_received; }
 float get_wr_o() { return wr_received; }
