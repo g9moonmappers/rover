@@ -15,7 +15,7 @@ Runs on the Arduino Mega. Reads UWB distances from the BU04, computes position v
 /* SJEKKLISTE:
   
   - Tune sensorstøy parametere (datablad + justeringer)
-  - Tune systemstøy (prøve seg frem / testing)
+  - Tune systemtøy (prøve seg frem / testing)
 
   ANDRE TING:
 
@@ -42,10 +42,18 @@ int16_t ax_raw, ay_raw, az_raw;
 
 float wl_received = 0.0;
 float wr_received = 0.0;
-float x_uwb  = 0.0;
-float y_uwb  = 0.0;
+float x_uwb;
+float y_uwb;
+
 
 bool new_position = false;
+bool new_metal = false;
+
+float Vb; //batteri volt
+float Ib; //batteri strøm
+float Til; //tilstand
+float M; //metall ID signal (0 elelr 1)
+
 
 
 
@@ -73,14 +81,15 @@ bool new_position = false;
   //koordinater til baser
   const float BS[4][2] = {
     {0.0, 0.0}, //0
-    {0.0, 0.0}, //1
-    {0.0, 0.0}, //2
-    {0.0, 0.0}, //3
+    {0.0, 2.208}, //1
+    {2.404, 0}, //2
+    {2,404, 2.208}, //3
   };
 
 
   unsigned long T; //nåværende tid
   float DT; //tid mellom oppdateringer i filteret.
+
 
 
 
@@ -95,6 +104,7 @@ bool new_position = false;
 
   Serial.begin(38400); 
   Serial2.begin(115200);
+  Serial3.begin(38400);
 
   Serial.setTimeout(10);
   Serial2.setTimeout(10);
@@ -140,7 +150,7 @@ bool new_position = false;
     };
 
     T = micros();
-
+    read_uwb();
 
   }
 
@@ -195,14 +205,53 @@ bool new_position = false;
 
 
     //sender til jetson nano:
-
-
     Serial.print("S:");      // sync marker
     Serial.print(K.x(0), 4);
     Serial.print(",");
     Serial.print(K.x(1), 4);
     Serial.print(",");
     Serial.println(K.x(2), 4);
+
+
+    //sender data over zulu til en ekstern PC
+    if (new_metal = true){
+      Serial3.print(K.x(0));
+      Serial3.print(" ");
+      Serial3.print(K.x(1));
+      Serial3.print(" ");
+      Serial3.print(M);
+      Serial3.print(" ");
+      Serial3.print(Til);
+      Serial3.print(" ");
+      Serial3.print(wl_o);
+      Serial3.print(" ");
+      Serial3.print(wr_o);
+      Serial3.print(" ");
+      Serial3.print(Vb);
+      Serial3.print(" ");
+      Serial3.println(Ib);
+      new_metal = false;    // HUSK Å SETT TIL TRUE 
+    }
+    else{
+      Serial3.print(K.x(0));
+      Serial3.print(" ");
+      Serial3.print(K.x(1));
+      Serial3.print(" ");
+      Serial3.print(0);
+      Serial3.print(" ");
+      Serial3.print(Til);
+      Serial3.print(" ");
+      Serial3.print(wl_o);
+      Serial3.print(" ");
+      Serial3.print(wr_o);
+      Serial3.print(" ");
+      Serial3.print(Vb);
+      Serial3.print(" ");
+      Serial3.println(Ib);
+      new_metal = false;    // HUSK Å SETT TIL TRUE 
+    }
+    
+
     //Serial.print(",");
     //Serial.println(obs(2));
   }
