@@ -71,7 +71,7 @@ float M; //metall ID signal (0 elelr 1)
   #define m_y 0.1
   #define m_teta 0.1
 
-
+  #define sample_time 20 //ms => 50 hz
 
 
   BLA::Matrix<Nobs> obs; //obersvasjonsvektor
@@ -165,9 +165,12 @@ float M; //metall ID signal (0 elelr 1)
 
     T = micros();
 
+
   }
 
   void loop() {
+    unsigned long start = millis();
+
     read_serial_data();
     read_uwb();
 
@@ -265,6 +268,14 @@ float M; //metall ID signal (0 elelr 1)
 
     //Serial.print(",");
     //Serial.println(obs(2));
+
+
+    //setter en delay her slik at loopen kjører på en bestemt frekvens
+    long finished = millis() - start;
+    long lasting = sample_time - finished;
+    if (lasting > 0) {
+      delay(lasting);
+    }
   }
 
 
@@ -396,8 +407,14 @@ bool parseUwbData(uint8_t* buffer, int length, float* distances) {
 }
 
 float get_wl_o() { return wl_received; }
-float get_wr_o() { return wr_received; }```
+float get_wr_o() { return wr_received; }
 ```
+
+
+
+
+
+
 ---
 ```
 
