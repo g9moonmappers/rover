@@ -3,9 +3,9 @@
 // Må endres for hver gang trilatereringen blir plassert i et nytt rom eller flyttes på
 const float baseStationPositions[4][2] = {
   {0.0,   0.0},   // Base station 0 nedre venstre hjørne
-  {0.0,   2.208}, // Base station 1 øvre venstre hjørne
-  {2.404, 0.0},   // Base station 2 nedre høyre hjørne
-  {2.404, 2.208}, // Base station 3 øvre høyre hjørne
+  {0.0,   6.0},   // Base station 1 øvre venstre hjørne
+  {2.425, 0.0},   // Base station 2 nedre høyre hjørne
+  {2.425, 6.0},   // Base station 3 øvre høyre hjørne
 };
 
 // Kalibrering av hver base station, finnes i google sheets
@@ -23,7 +23,7 @@ bool parseUwbData(byte* buffer, int length, float* distances) {
   return true;
 }
 
-// Regner ut posisjonen til taggen basert på avstanden til hver basestasjon, trenger minst 3 base stations
+// Regner ut posisjonen til taggen ved hjelp av trilateration (samme prinsipp som GPS)
 bool trilaterate(float* distances, float* x, float* y) {
   struct ValidStation { float x, y, dist; };
   ValidStation validStations[4];
@@ -74,7 +74,7 @@ void loop() {
   static byte buffer[256];
   static int bufferIndex = 0;
   static bool messageStarted = false;
-  char output[64];
+  char xStr[10], yStr[10], dStr[10];
 
   while (Serial2.available()) {
     byte incoming = Serial2.read();
@@ -89,12 +89,17 @@ void loop() {
         if (parseUwbData(buffer, bufferIndex, distances)) {
           float x, y;
           bool valid = trilaterate(distances, &x, &y);
-          if (valid) snprintf(output, sizeof(output), "%.3f,%.3f", x, y);
-          else       snprintf(output, sizeof(output), "0,0");
-          Serial.print(output);
+          if (valid) {
+            dtostrf(x, 1, 3, xStr);
+            dtostrf(y, 1, 3, yStr);
+          } else {
+            strcpy(xStr, "0");
+            strcpy(yStr, "0");
+          }
+          Serial.print(xStr); Serial.print(","); Serial.print(yStr);
           for (int i=0; i<4; i++) {
-            snprintf(output, sizeof(output), ",%.3f", distances[i]);
-            Serial.print(output);
+            dtostrf(distances[i], 1, 3, dStr);
+            Serial.print(","); Serial.print(dStr);
           }
           Serial.println();
         }
