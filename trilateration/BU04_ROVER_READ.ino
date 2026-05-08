@@ -23,7 +23,7 @@ bool parseUwbData(byte* buffer, int length, float* distances) {
   return true;
 }
 
-// Regner ut posisjonen til taggen ved hjelp av trilateration (samme prinsipp som GPS)
+// Regner ut posisjonen til taggen basert på avstanden til hver basestasjon, trenger minst 3 base stations
 bool trilaterate(float* distances, float* x, float* y) {
   struct ValidStation { float x, y, dist; };
   ValidStation validStations[4];
