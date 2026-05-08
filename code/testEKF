@@ -1,0 +1,396 @@
+# Kode for EKF og posisjonkontroller
+
+import time
+import math
+import numpy as np
+import serial
+import matplotlib.pyplot as plt
+
+from dynamixel_sdk import *
+import ctypes
+
+portHandler = PortHandler("COM4")
+packetHandler = PacketHandler(2.0)
+
+dxl_id1 = 1   # left
+dxl_id2 = 2   # right
+dxl_id3 = 3   # left
+dxl_id4 = 4   # right
+dxl_id5 = 5   # left
+dxl_id6 = 6   # right
+
+
+mode_adresse = 11
+torque_on_address = 64
+goal_velocity_adresse = 104
+present_velocity_adresse = 128
+
+T_ON = 1
+T_OFF = 0
+velocity_mode = 1
+
+groupBulkWrite = GroupBulkWrite(portHandler, packetHandler)
+groupBulkRead = GroupBulkRead(portHandler, packetHandler)
+
+Nstate = 3
+Nobs = 3
+
+# sensorstøy:
+
+n_x = 0.01
+n_y = 0.01
+n_teta = 0.05
+
+# systemstøy
+
+m_x = 0.1
+m_y = 0.1
+m_teta = 0.1
+
+# system konstanter
+
+r = 0.05
+B = 0.29
+
+# kontroller parametere
+
+Kp_lengde = 3
+Kp_teta = 1
+
+# EKF parametere
+
+x = np.zeros(Nstate)
+P = np.eye(Nstate)
+
+H = np.eye(Nobs, Nstate)
+
+R = np.diag([n_x**2, n_y**2, n_teta**2])
+Q = np.diag([m_x**2, m_y**2, m_teta**2])
+
+# plot data
+ekf_x = []
+ekf_y = []
+uwb_x = []
+uwb_y = []
+timestamps = []
+
+plt.ion()
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+t0 = time.time()
+
+
+# EKF prosess
+
+def ekf_predict(x, P, V, w, dt):
+    teta = x[2]
+
+    # ulinær modell
+    x_pred = np.array([
+        x[0] + V * math.cos(teta) * dt,
+        x[1] + V * math.sin(teta) * dt,
+        x[2] + w * dt
+    ])
+
+    # tar i bruk jacobian av systemet
+    F = np.array([
+        [1.0, 0.0, -V * math.sin(teta) * dt],
+        [0.0, 1.0, V * math.cos(teta) * dt],
+        [0.0, 0.0, 1.0]
+    ])
+
+    P_pred = F @ P @ F.T + Q
+
+    return x_pred, P_pred
+
+
+def ekf_update(x_pred, P_pred, obs):
+    S = H @ P_pred @ H.T + R
+    K_gain = P_pred @ H.T @ np.linalg.inv(S)
+
+    innovation = obs - H @ x_pred
+    innovation[2] = noramilise_angle(innovation[2])
+
+    x_upd = x_pred + K_gain @ innovation
+    P_upd = (np.eye(Nstate) - K_gain @ H) @ P_pred
+
+    return x_upd, P_upd
+
+# andre funksjoner
+
+
+def noramilise_angle(a):
+    # normalisereer vinkelen slik at den holder seg
+    return (a + math.pi) % (2 * math.pi) - math.pi
+
+
+def til_vinkelhastighet(wl_o, wr_o):
+    V = (r/2) * (wr_o + wl_o)
+    w = (r / B) * (wr_o - wl_o)
+
+    return V, w
+
+
+def h_til_vinkelh(V, w):
+    wl = (V/r) - (w * B / (2*r))
+    wr = (V/r) + (w * B / (2*r))
+
+    return wr, wl
+
+
+def ønsket_coords(t_now, t_start):
+    # få ønsket destinasjon (x,y)
+    t_now = t_now - t_start
+
+    # if t_now > 12:
+    #     x = 0
+    #     y = 0
+    # elif t_now > 8:
+    #     x = 0
+    #     y = 0.5
+    # elif t_now >4:
+    #     x = 0.5
+    #     y = 0.5
+    # elif t_now > 0:
+    #     x = 0.5
+    #     y = 0
+    # else:
+    #     x = 0.0
+    #     y = 0.0
+    
+    if t_now > 3:
+        x = 0
+        y = 0
+    else:
+        x = 1
+        y = 0
+
+    return 0, 0
+
+
+def setup_motors():
+    if not portHandler.openPort():
+        print("Failed to open port")
+        exit()
+    if not portHandler.setBaudRate(57600):
+        print("Failed to set baudrate")
+        exit()
+
+    packetHandler.write1ByteTxRx(
+        portHandler, dxl_id1, mode_adresse, velocity_mode)
+    packetHandler.write1ByteTxRx(
+        portHandler, dxl_id2, mode_adresse, velocity_mode)
+    packetHandler.write1ByteTxRx(
+        portHandler, dxl_id3, mode_adresse, velocity_mode)
+    packetHandler.write1ByteTxRx(
+        portHandler, dxl_id4, mode_adresse, velocity_mode)
+    packetHandler.write1ByteTxRx(
+        portHandler, dxl_id5, mode_adresse, velocity_mode)
+    packetHandler.write1ByteTxRx(
+        portHandler, dxl_id6, mode_adresse, velocity_mode)
+
+    packetHandler.write1ByteTxRx(portHandler, dxl_id1, torque_on_address, T_ON)
+    packetHandler.write1ByteTxRx(portHandler, dxl_id2, torque_on_address, T_ON)
+    packetHandler.write1ByteTxRx(portHandler, dxl_id3, torque_on_address, T_ON)
+    packetHandler.write1ByteTxRx(portHandler, dxl_id4, torque_on_address, T_ON)
+    packetHandler.write1ByteTxRx(portHandler, dxl_id5, torque_on_address, T_ON)
+    packetHandler.write1ByteTxRx(portHandler, dxl_id6, torque_on_address, T_ON)
+
+    groupBulkRead.addParam(dxl_id1, present_velocity_adresse, 4)
+    groupBulkRead.addParam(dxl_id2, present_velocity_adresse, 4)
+    groupBulkRead.addParam(dxl_id3, present_velocity_adresse, 4)
+    groupBulkRead.addParam(dxl_id4, present_velocity_adresse, 4)
+    groupBulkRead.addParam(dxl_id5, present_velocity_adresse, 4)
+    groupBulkRead.addParam(dxl_id6, present_velocity_adresse, 4)
+    print("Motors ready")
+
+
+def to_bytes(val):
+    # handles negative values correctly (two's complement)
+    u = ctypes.c_uint32(ctypes.c_int32(int(val)).value).value
+    return [
+        DXL_LOBYTE(DXL_LOWORD(u)),
+        DXL_HIBYTE(DXL_LOWORD(u)),
+        DXL_LOBYTE(DXL_HIWORD(u)),
+        DXL_HIBYTE(DXL_HIWORD(u))
+    ]
+
+
+def set_motor(wl, wr):
+    # rad/s  →  RPM  →  Dynamixel steps (0–460 = 0–105 RPM)
+    steps_per_rpm = 460.0 / 105.0
+
+    wl_rpm = wl * 60.0 / (2 * math.pi)
+    wr_rpm = wr * 60.0 / (2 * math.pi)
+
+    wl_steps = int(wl_rpm * steps_per_rpm)
+    wr_steps = int(wr_rpm * steps_per_rpm)
+
+    wl_steps = max(-180, min(180, wl_steps))
+    wr_steps = max(-180, min(180, wr_steps))
+    
+
+    groupBulkWrite.addParam(
+        dxl_id1, goal_velocity_adresse, 4, to_bytes(wl_steps))
+    groupBulkWrite.addParam(
+        dxl_id3, goal_velocity_adresse, 4, to_bytes(wl_steps))
+    groupBulkWrite.addParam(
+        dxl_id5, goal_velocity_adresse, 4, to_bytes(wl_steps))
+    groupBulkWrite.addParam(
+        dxl_id2, goal_velocity_adresse, 4, to_bytes(wr_steps))
+    groupBulkWrite.addParam(
+        dxl_id4, goal_velocity_adresse, 4, to_bytes(wr_steps))
+    groupBulkWrite.addParam(
+        dxl_id6, goal_velocity_adresse, 4, to_bytes(wr_steps))
+    groupBulkWrite.txPacket()
+    groupBulkWrite.clearParam()
+
+
+def read_motor_velocities():
+    groupBulkRead.txRxPacket()
+    
+    v1 = groupBulkRead.getData(dxl_id1, present_velocity_adresse, 4)
+    v2 = groupBulkRead.getData(dxl_id2, present_velocity_adresse, 4)
+    v3 = groupBulkRead.getData(dxl_id3, present_velocity_adresse, 4)
+    v4 = groupBulkRead.getData(dxl_id4, present_velocity_adresse, 4)
+    v5 = groupBulkRead.getData(dxl_id5, present_velocity_adresse, 4)
+    v6 = groupBulkRead.getData(dxl_id6, present_velocity_adresse, 4)
+    
+    v1 = ctypes.c_int32(v1).value
+    v2 = ctypes.c_int32(v2).value
+    v3 = ctypes.c_int32(v3).value
+    v4 = ctypes.c_int32(v4).value
+    v5 = ctypes.c_int32(v5).value
+    v6 = ctypes.c_int32(v6).value
+    
+    
+    raw_l=(v1 + v3 + v5)/3
+    raw_r=(v2 + v4 + v6)/3
+
+        # raw_l = groupBulkRead.getData(dxl_id1, present_velocity_adresse, 4)
+        # raw_r = groupBulkRead.getData(dxl_id2, present_velocity_adresse, 4)
+
+        # raw is uint32 — reinterpret as signed int32 for negative velocities
+    # raw_l=ctypes.c_int32(raw_l).value
+    # raw_r=ctypes.c_int32(raw_r).value
+    
+    steps_per_rpm= 105.0 / 460.0
+    # steps → RPM → rad/s
+    wl=(raw_l * steps_per_rpm) * (2 * math.pi / 60.0)
+    wr=(raw_r * steps_per_rpm) * (2 * math.pi / 60.0)
+    return wl, wr
+
+
+ser = serial.Serial(
+    port='COM6',
+    baudrate=38400,
+    bytesize=serial.EIGHTBITS,
+    parity=serial.PARITY_NONE,
+    stopbits=serial.STOPBITS_ONE,
+    timeout=1
+)
+
+
+def main():
+    global x, P
+
+    hz=50
+    dt_target=1 / hz
+
+    t_prev=time.perf_counter()
+    t_start = time.perf_counter()
+
+    while True:
+        t_now=time.perf_counter()
+        dt=t_now - t_prev
+        t_prev=t_now
+        
+        line = ser.readline().decode('utf-8', errors='ignore').strip()
+        if line.startswith("S:"):
+            parts = line[2:].split(",")
+            if len(parts) == 6:
+                try:
+                    ex, ey, et, ux, uy, teta_obs = [float(p) for p in parts]
+                    t = time.time() - t0
+                    timestamps.append(t)
+                    ekf_x.append(ex)
+                    ekf_y.append(ey)
+                    uwb_x.append(ux)
+                    uwb_y.append(uy)
+                except ValueError:
+                    pass
+    
+        # obs = np.array([read_x(), read_y(), read_teta()])
+    
+        # wl_o = (read_w1() + read_w2() + read_w3()) / 3.0
+        # wr_o = (read_w4() + read_w5() + read_w6()) / 3.0
+        wl_o, wr_o=read_motor_velocities()
+    
+        wr_o=-wr_o
+    
+        V, w=til_vinkelhastighet(wl_o, wr_o)
+    
+        # EKF:
+        x, P=ekf_predict(x, P, V, w, dt)
+        # x, P = ekf_update(x_pred, P_pred, obs)
+    
+        # posisjonskontroller:
+        x_d, y_d=ønsket_coords(t_now, t_start)
+    
+        x_error=x_d - x[0]
+        y_error=y_d - x[1]
+    
+        length_error=math.sqrt(x_error**2 + y_error**2)
+        teta_d=math.atan2(y_error, x_error)
+        teta_error=noramilise_angle(teta_d - x[2])
+    
+        V_pådrag=Kp_lengde * length_error
+        w_pådrag=Kp_teta * teta_error
+        
+        if abs(V_pådrag) < 0.05:
+            V_pådrag = 0
+        if abs(w_pådrag) < 0.05:
+            w_pådrag = 0
+    
+        # saturation (regulerer hvor raskkt hjula går)
+        # V_max=0.5  # m/s
+        # V_pådrag=max(-V_max, min(V_max, V_pådrag))
+    
+        # Sender data til motorer
+        wr, wl=h_til_vinkelh(V_pådrag, w_pådrag)
+        wr=-wr
+        # set_motor(wl, wr)
+        set_motors(1, 1);
+        
+        if len(timestamps) % 25 == 0 and len(timestamps) > 0:
+            axes[0].cla()
+            axes[0].plot(uwb_x, uwb_y, 'r.', markersize=3, label='UWB raw')
+            axes[0].plot(ekf_x, ekf_y, 'b-', linewidth=2, label='EKF')
+            axes[0].set_xlabel('x [m]')
+            axes[0].set_ylabel('y [m]')
+            axes[0].legend()
+            axes[0].axis('equal')
+            axes[0].grid(True)
+            axes[0].set_title('XY Path')
+
+            axes[1].cla()
+            axes[1].plot(timestamps, uwb_x, 'r.', markersize=2, label='UWB x')
+            axes[1].plot(timestamps, ekf_x, 'b-', linewidth=2, label='EKF x')
+            axes[1].set_xlabel('time [s]')
+            axes[1].set_ylabel('x [m]')
+            axes[1].legend()
+            axes[1].grid(True)
+            axes[1].set_title('X over time')
+
+            plt.tight_layout()
+            plt.pause(0.01)
+    
+        elapsed=time.perf_counter() - t_now
+        sleep_for=dt_target - elapsed
+    
+        if sleep_for > 0:
+            time.sleep(sleep_for)
+
+
+if __name__ == "__main__":
+    setup_motors()
+    main()
