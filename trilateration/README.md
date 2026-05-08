@@ -11,12 +11,8 @@
 ## Wiring
 
 **Anchors (Arduino Nano ESP32):**
-- BU-04 TX1 → D2 (GPIO5) — config UART
-- BU-04 RX1 → D3 (GPIO6) — config UART
-- BU-04 TX2 → RX0 (GPIO44) — data UART
-- BU-04 RX2 → TX0 (GPIO43) — data UART
-- BU-04 3V3 → 3.3V
-- BU-04 GND → GND
+<img width="3508" height="2481" alt="trilaterering_final_oppsett" src="https://github.com/user-attachments/assets/be7cbaa7-8550-4211-ae7d-4e304a0e0b85" />
+
 
 **Tag (Arduino Mega):**
 - BU-04 TX2 → Mega pin 17 (RX2)
