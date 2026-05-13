@@ -8,7 +8,7 @@ const float baseStationPositions[4][2] = {
   {2.425, 6.0},   // Base station 3 øvre høyre hjørne
 };
 
-// Kalibrering av hver base station, finnes i google sheets
+// Kalibrering av hver base station, finnes i google sheets https://docs.google.com/spreadsheets/d/1d4-OWOsPB2cUo5gQq4QdnQ2pV3oUy5KFTMYp_f5sS5Y/edit?usp=sharing
 const float calibrationSlope[4]     = {1.0499, 1.0499, 1.0416, 1.0478};
 const float calibrationIntercept[4] = {452.6,  452.6,  381.7,  262.0 };
 
