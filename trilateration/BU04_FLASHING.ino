@@ -30,7 +30,7 @@ void setup() {
   delay(50);
 
   Serial.println("Starting board configuration...");
-  configureBU04(2, 1, 1, 1); // id=2, role (0 = tag 1 = base station), channel=1 (6.25-6.75 GHz), data rate (0=850Kbps 1=6.8Mbps)
+  configureBU04(2, 1, 1, 1); // id=2, role (0 = tag 1 = anker), channel=1 (6.25-6.75 GHz), data rate (0=850Kbps 1=6.8Mbps)
 }
 
 void loop() {}
