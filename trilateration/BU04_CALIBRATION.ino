@@ -3,19 +3,17 @@ const int   END_MM                = 1500;  // Kalibrering slutt mm
 const int   STEP_MM               = 100;   // Steg-størrelse mellom hver måling
 const int   SAMPLES_PER_STEP      = 40;    // Hvor mange målinger som blir tatt på hver avstand
 const int   SAMPLE_INTERVAL_MS    = 200;   // hvor ofte hver måling blir tatt
-const int   TARGET_BASE_STATION   = 3;     // hvilken base station skal kalibreres
+const int   TARGET_ANCHOR         = 3;     // hvilket anker skal kalibreres
 const float CALIBRATION_SLOPE     = 1.0;
 const float CALIBRATION_INTERCEPT = 0.0;
-
 const int numberOfSteps = (END_MM - START_MM) / STEP_MM + 1;
 float allMeasurements[15][40];
-
 static byte buffer[256];
 static int bufferIndex = 0;
 static bool messageStarted = false;
 float distances[8];
 
-// Leser av avstanden mellom tag og hver basestasjon fra BU-04
+// Leser av avstanden mellom tag og hvert anker fra BU-04
 bool readUWB() {
   while (Serial2.available()) {
     byte incoming = Serial2.read();
@@ -60,7 +58,6 @@ void setup() {
 
 void loop() {
   if (finished) return;
-
   if (waitingForUser) {
     if (Serial.available()) {
       while (Serial.available()) Serial.read();
@@ -68,14 +65,12 @@ void loop() {
     }
     return;
   }
-
-  if (readUWB() && distances[TARGET_BASE_STATION] > 0 && millis() - lastSampleTime >= SAMPLE_INTERVAL_MS) {
-    float measurement = (distances[TARGET_BASE_STATION] * 1000.0 - CALIBRATION_INTERCEPT) / CALIBRATION_SLOPE;
+  if (readUWB() && distances[TARGET_ANCHOR] > 0 && millis() - lastSampleTime >= SAMPLE_INTERVAL_MS) {
+    float measurement = (distances[TARGET_ANCHOR] * 1000.0 - CALIBRATION_INTERCEPT) / CALIBRATION_SLOPE;
     allMeasurements[currentStep][samplesCollected] = measurement;
     lastSampleTime = millis();
     samplesCollected++;
     Serial.println((int)measurement);
-
     if (samplesCollected >= SAMPLES_PER_STEP) {
       samplesCollected = 0;
       currentStep++;
