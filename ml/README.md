@@ -48,7 +48,7 @@ ml/
 │   ├── raw/              # Rå burst-CSV (S0001_triad_raw.csv, …)
 │   ├── live/             # Live/test-innsamling (T0001, S9999, …)
 │   ├── processed/        # Features, train/val/test split, SAM-referanser
-│   └── metadata.csv      # Én rad per prøve (kobler sample_id → fil + labels)
+│   └── metadata.csv      # en rad per prøve (kobler sample_id → fil + labels)
 ├── models/               # Trenede .joblib (gitignored — ikke på GitHub)
 ├── scripts/              # predict.py, add_feedback_sample.py
 └── training/             # extract, split, train, evaluate
@@ -95,7 +95,7 @@ Features inkluderer bl.a. (styrt av `feature_config.yaml`): mean/std/min/max per
 
 | Script | Beskrivelse |
 |--------|-------------|
-| `scripts/predict.py` | Predikerer label fra én rå burst-CSV |
+| `scripts/predict.py` | Predikerer label fra en rå burst-CSV |
 | `scripts/add_feedback_sample.py` | Flytter live-prøve til `raw/` og oppdaterer metadata (læring i felt) |
 
 ### 3.5 Klasser (labels)
@@ -217,7 +217,7 @@ Du skal se `(.venv-ml)` i prompten. Alle `python ml/...`-kommandoer kjøres ette
 
 ### 8.1 `metadata.csv`
 
-Én rad per prøve. Viktige kolonner:
+en rad per prøve. Viktige kolonner:
 
 | Kolonne | Betydning |
 |---------|-----------|

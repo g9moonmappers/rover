@@ -58,16 +58,14 @@ src/
 ```
 
 
-| Pakke                    | Type            | Hovedansvar                                                                       |
-| ------------------------ | --------------- | --------------------------------------------------------------------------------- |
-| `moonmapper_description` | C++ + data      | Rover-URDF, `earth_arena*.sdf` / `moon_arena.sdf`, Gazebo-plugin for rocker-bogie |
-| `moonmapper_bringup`     | Python          | Wrapper som starter `gazebo_rover.launch.py` med fornuftige defaults              |
-| `moonmapper_autonomy`    | Python          | `depth_to_scan_node`, `safety_obstacle_node`                                      |
-| `moonmapper_localization`| Python + launch | (Sim) fake UWB + `robot_localization` EKF → `/odometry/filtered`                 |
-| `moonmapper_nav2`        | Python + launch | SLAM, Nav2, frontier, alle autonomi-launch-filer                                  |
+| Pakke                     | Type            | Hovedansvar                                                                       |
+| ------------------------- | --------------- | --------------------------------------------------------------------------------- |
+| `moonmapper_description`  | C++ + data      | Rover-URDF, `earth_arena*.sdf` / `moon_arena.sdf`, Gazebo-plugin for rocker-bogie |
+| `moonmapper_bringup`      | Python          | Wrapper som starter `gazebo_rover.launch.py` med fornuftige defaults              |
+| `moonmapper_autonomy`     | Python          | `depth_to_scan_node`, `safety_obstacle_node`                                      |
+| `moonmapper_localization` | Python + launch | (Sim) fake UWB + `robot_localization` EKF → `/odometry/filtered`                  |
+| `moonmapper_nav2`         | Python + launch | SLAM, Nav2, frontier, alle autonomi-launch-filer                                  |
 
-
-**UWB/EKF (sim):** `moonmapper_localization` er nå inkludert i denne workspacen. Den kan startes separat, eller via `moonmapper_nav2` med `use_sim_uwb:=true` (se §9.5).
 
 ---
 
@@ -118,12 +116,12 @@ src/
 ## 4. Operativsystem og ROS-versjon
 
 
-| OS                             | Anbefalt ROS 2 | Støtte for `src/` sim                                                                                         |
-| ------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Ubuntu 24.04** (PC)          | **Jazzy**      | ✅ Full — anbefalt for team-PC                                                                                 |
-| **Ubuntu 22.04** (Jetson m.m.) | **Humble**     | ⚠️ Mulig, men pakkene i repoet er testet mot Jazzy; bytt pakkenavn `ros-jazzy-`* → `ros-humble-*` ved install |
-| **Windows**                    | —              | ❌ Ikke innebygd. Bruk **WSL2 + Ubuntu 24.04** for ROS, eller kun ML på Windows                                |
-| **macOS**                      | —              | ❌ Ikke offisielt for Gazebo Sim 8-stack. Bruk Linux VM/WSL eller fokuser på ML                                |
+| OS                             | Anbefalt ROS 2 | Støtte for `src/` sim                                                                                      |
+| ------------------------------ | -------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Ubuntu 24.04** (PC)          | **Jazzy**      | Full — anbefalt for team-PC                                                                                |
+| **Ubuntu 22.04** (Jetson m.m.) | **Humble**     | Mulig, men pakkene i repoet er testet mot Jazzy; bytt pakkenavn `ros-jazzy-`* → `ros-humble-`* ved install |
+| **Windows**                    | —              | Ikke innebygd. Bruk **WSL2 + Ubuntu 24.04** for ROS, eller kun ML på Windows                               |
+| **macOS**                      | —              | Ikke offisielt for Gazebo Sim 8-stack. Bruk Linux VM/WSL eller fokuser på ML                               |
 
 
 **Jetson / ekte robot:** Se også rot-`README.md` (hardware, Humble, RealSense). Sim-stack i `src/` er primært for **utviklings-PC**.
@@ -190,7 +188,7 @@ ROS 2 + Gazebo Sim 8-stack er **ikke** dokumentert her. Teammedlemmer på Mac ka
 git clone https://github.com/g9moonmappers/rover.git
 cd rover    # eller mlOGdt — samme struktur
 
-# 2. Installer ROS-avhengigheter (Ubuntu, én gang)
+# 2. Installer ROS-avhengigheter (Ubuntu, en gang)
 sudo bash scripts/install_ros_deps.sh
 
 # 3. Bygg workspace
@@ -230,7 +228,7 @@ colcon build --symlink-install
 source scripts/source_workspace.sh
 ```
 
-Kun én pakke (raskere):
+Kun en pakke (raskere):
 
 ```bash
 colcon build --packages-select moonmapper_nav2 --symlink-install
@@ -321,22 +319,23 @@ ros2 launch moonmapper_nav2 autonomous_exploration_full.launch.py \
   start_rviz:=true
 ```
 
-| Argument                            | Standard        | Betydning                                      |
-| ----------------------------------- | --------------- | ---------------------------------------------- |
-| `start_sim`                         | `true`          | Start Gazebo via `sim_rover_clean`             |
-| `start_slam`                        | `true`          | RTAB-Map etter stabiliseringstid               |
-| `start_nav2`                        | `true`          | Nav2-stack                                     |
-| `start_explorer`                    | `true`          | Frontier explorer                              |
-| `start_rviz`                        | `false`         | Nav2-RViz (`true` anbefales for visning)       |
-| `start_rtabmap_viz`                 | `false`         | Eget RTAB-Map-RViz-vindu                       |
-| `use_sim_uwb`                       | `false`         | Start `moonmapper_localization` (fake UWB + EKF) |
-| `navigation_stack_delay`            | `12.0`          | Sekunder før Nav2                              |
-| `explorer_extra_delay_sec`          | `8.0`           | Ekstra sekunder etter Nav2 før explorer        |
-| `sim_stabilization_before_slam_sec` | `6.0`           | Sekunder før SLAM                              |
-| `delete_rtabmap_db`                 | `false`         | `true` = slett gammel kartdatabase før kjøring |
-| `initial_spin`                      | `true`          | Liten rotasjon ved oppstart for SLAM           |
-| `world_preset`                      | `expo_20x20`    | Se §10 (standard autonomi)                     |
-| `force_set_pose_after_spawn`        | `false`         | Tving Gazebo set_pose (feilsøking)             |
+
+| Argument                            | Standard     | Betydning                                        |
+| ----------------------------------- | ------------ | ------------------------------------------------ |
+| `start_sim`                         | `true`       | Start Gazebo via `sim_rover_clean`               |
+| `start_slam`                        | `true`       | RTAB-Map etter stabiliseringstid                 |
+| `start_nav2`                        | `true`       | Nav2-stack                                       |
+| `start_explorer`                    | `true`       | Frontier explorer                                |
+| `start_rviz`                        | `false`      | Nav2-RViz (`true` anbefales for visning)         |
+| `start_rtabmap_viz`                 | `false`      | Eget RTAB-Map-RViz-vindu                         |
+| `use_sim_uwb`                       | `false`      | Start `moonmapper_localization` (fake UWB + EKF) |
+| `navigation_stack_delay`            | `12.0`       | Sekunder før Nav2                                |
+| `explorer_extra_delay_sec`          | `8.0`        | Ekstra sekunder etter Nav2 før explorer          |
+| `sim_stabilization_before_slam_sec` | `6.0`        | Sekunder før SLAM                                |
+| `delete_rtabmap_db`                 | `false`      | `true` = slett gammel kartdatabase før kjøring   |
+| `initial_spin`                      | `true`       | Liten rotasjon ved oppstart for SLAM             |
+| `world_preset`                      | `expo_20x20` | Se §10 (standard autonomi)                       |
+| `force_set_pose_after_spawn`        | `false`      | Tving Gazebo set_pose (feilsøking)               |
 
 
 **Kun sim + kartlegging (uten Nav2/utforsker):**
@@ -370,15 +369,15 @@ ros2 pkg executables moonmapper_nav2
 ## 10. Verdener (Gazebo) og fysikkprofiler
 
 
-| `world_preset`  | SDF-fil                        | Bruk                                              |
-| --------------- | ------------------------------ | ------------------------------------------------- |
-| `expo_20x20`    | `earth_arena_expo_20x20.sdf`   | **Standard autonomi** — 20×20 expo-arena, spawn SW |
-| `moon`          | `moon_arena.sdf`               | Måne-lignende arena                               |
-| `earth`         | `earth_arena.sdf`              | Jord-arena                                        |
-| `earth_explore` | `earth_arena_explore.sdf`      | Eldre utforskningsarena                           |
+| `world_preset`  | SDF-fil                      | Bruk                                               |
+| --------------- | ---------------------------- | -------------------------------------------------- |
+| `expo_20x20`    | `earth_arena_expo_20x20.sdf` | **Standard autonomi** — 20×20 expo-arena, spawn SW |
+| `moon`          | `moon_arena.sdf`             | Måne-lignende arena                                |
+| `earth`         | `earth_arena.sdf`            | Jord-arena                                         |
+| `earth_explore` | `earth_arena_explore.sdf`    | Eldre utforskningsarena                            |
+
 
 Alias: `world_preset:=expo` er det samme som `expo_20x20`.
-
 
 **Fysikk:** `physics_profile` kan settes i `gazebo_rover` / `sim_rover_clean` (f.eks. `earth_stable_6wd`). Tom verdi = preset fra `world_preset`.
 
@@ -405,8 +404,8 @@ frontier_explorer → /navigate_to_pose (Nav2 action)
 | `/map`         | Occupancy grid for Nav2 og explorer |
 | `/scan`        | Syntetisk laser fra dybde           |
 
-**Merk:** `frontier_explorer` styrer *ikke* kjøring direkte (utenom initial spin ved oppstart). Den sender mål til Nav2 via `NavigateToPose`.
 
+**Merk:** `frontier_explorer` styrer *ikke* kjøring direkte (utenom initial spin ved oppstart). Den sender mål til Nav2 via `NavigateToPose`.
 
 RTAB-database (standard): `~/.ros/moonmapper_rtabmap.db`
 
@@ -425,7 +424,7 @@ RTAB-database (standard): `~/.ros/moonmapper_rtabmap.db`
 | Gazebo svart vindu / krasj                        | Prøv `gz_sim_verbosity:=1`, sjekk GPU/WSLg                                                      |
 | Nav2 starter ikke                                 | Vent `navigation_stack_delay`; sjekk at `/map` publiseres (`ros2 topic hz /map`)                |
 | Rover kjører ikke                                 | Sjekk `ros2 topic echo /cmd_vel` og at kontrollere er lastet (se Gazebo-terminal)               |
-| Utforsker står og venter                           | Sjekk `/frontier_explorer/status` og at Nav2 action `/navigate_to_pose` finnes                  |
+| Utforsker står og venter                          | Sjekk `/frontier_explorer/status` og at Nav2 action `/navigate_to_pose` finnes                  |
 
 
 **Byggefeil Gazebo-plugin:** Filen `RockerBogieDifferential.cc` skal **ikke** ha Python-trippel-anførselstegn `"""` øverst — kun C++-kommentarer `//`.
@@ -441,7 +440,7 @@ RTAB-database (standard): `~/.ros/moonmapper_rtabmap.db`
 | **Package**                   | En ROS-modul (`moonmapper_nav2`, …)                       |
 | **Node**                      | Et kjørende program i ROS                                 |
 | **Topic**                     | Kanal for meldinger (f.eks. `/cmd_vel`)                   |
-| **Launch**                    | Starter flere noder med én kommando                       |
+| **Launch**                    | Starter flere noder med en kommando                       |
 | **URDF/Xacro**                | Robotbeskrivelse (ledd, sensorer)                         |
 | **TF**                        | Koordinatsystem-kjede (`map` → `odom` → `base_footprint`) |
 | **colcon build**              | Kompilerer/installerer alle pakker i `src/`               |
