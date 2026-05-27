@@ -1,0 +1,5 @@
+# Controller manager for Gazebo gz_ros2_control-plugin
+controller_manager:
+  ros__parameters:
+    update_rate: 200
+    use_sim_time: true

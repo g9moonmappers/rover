@@ -1,0 +1,11 @@
+build/
+install/
+log/
+.venv/
+.venv-ml/
+venv/
+__pycache__/
+*.pyc
+ml/models/*.joblib
+ml/models/*.pkl
+ml/models/*.pt

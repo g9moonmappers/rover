@@ -1,0 +1,15 @@
+object_classes:
+  - aluminium_kule
+  - jern_kule
+  - stål_kule
+  - titan_kule
+
+material_classes:
+  - aluminium
+  - jern
+  - stål
+  - titan
+  - ukjent
+
+primary_label: label_object
+

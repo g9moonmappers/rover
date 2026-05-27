@@ -1,0 +1,38 @@
+triad:
+  num_sensors: 2
+  channels_per_sensor: 18
+  total_channels: 36
+  wavelengths_nm:
+    - 410
+    - 435
+    - 460
+    - 485
+    - 510
+    - 535
+    - 560
+    - 585
+    - 610
+    - 645
+    - 680
+    - 705
+    - 730
+    - 760
+    - 810
+    - 860
+    - 900
+    - 940
+
+features:
+  include_mean_36: true
+  include_std_36: true
+  include_min_36: true
+  include_max_36: true
+  include_rms_total: true
+  include_rms_per_sensor: true
+  include_ratios: true
+  include_derivatives: true
+
+burst:
+  recommended_samples_per_object: 20
+  minimum_samples_per_object: 10
+

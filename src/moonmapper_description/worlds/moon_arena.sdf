@@ -1,0 +1,181 @@
+<?xml version="1.0" ?>
+<!--
+  MoonMapper test-arena for Gazebo Sim 8.
+
+  NB: Fila heter fortsatt ``moon_arena.sdf`` (og verdens-navn ``moon_arena``)
+  for at gazebo_rover.launch.py og resten av stacken skal vaere uendret,
+  men innholdet er konvertert til et JORDLIG (earth-like) test-miljoe:
+
+    * Jord-gravitasjon (-9.81 m/s^2)
+    * Lys, dagslys-himmel + sterk sol + lyst ambient (ingen "natt paa maanen")
+    * Groennlig "gress/jord"-bakke i staden for graa regolith
+    * Ingen grensemurer (tidligere 5x4 m ``arena_wall_*``) — fritt felt;
+      stor bakkeplate (20x20 m) begrenser likevel praktisk utforskning.
+      Fire fargede hjoerne-stolper gir RTAB-Map visuelle holdepunkter.
+    * INGEN hindringer (steiner, kraterkanter, hauger) inne i arenaet.
+
+  Vil du ha grensemurer igjen? Legg tilbake ``arena_wall_*``-modellene
+  (rett etter ``ground_plane``). Hjoerne-stolper: ``corner_post_*``.
+-->
+<sdf version="1.11">
+  <world name="moon_arena">
+
+    <!-- Fysikk: Dartsim — ros2_control diff_drive + JointVelocityCmd er langt mer stabilt her enn
+         med bullet-featherstone (kjente issues med hjulrotasjon / kontakt vs hastighetsmotor). -->
+    <physics name="1ms" type="dartsim">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+
+    <!-- Gazebo Sim 8 system-plugins -->
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-contact-system"
+            name="gz::sim::systems::Contact"/>
+    <plugin filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system"
+            name="gz::sim::systems::Imu"/>
+
+    <!-- Jord-gravitasjon. -->
+    <gravity>0 0 -9.81</gravity>
+
+    <!-- Lys, dagslys-scene. -->
+    <scene>
+      <ambient>0.45 0.45 0.50 1</ambient>
+      <background>0.55 0.75 0.95 1</background>
+      <shadows>true</shadows>
+      <grid>false</grid>
+      <sky/>
+    </scene>
+
+    <!-- Sol: skarp direksjonal kilde med varm, sterk dagslyskarakter. -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>1.0 0.97 0.92 1</diffuse>
+      <specular>0.5 0.5 0.5 1</specular>
+      <attenuation>
+        <range>100</range>
+        <linear>0.0</linear>
+        <constant>0.9</constant>
+        <quadratic>0.0</quadratic>
+      </attenuation>
+      <direction>-0.4 0.3 -1.0</direction>
+    </light>
+
+    <!-- Svak himmel-fill saa skyggesiden ikke er helt moerk. -->
+    <light type="directional" name="sky_fill">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.35 0.40 0.45 1</diffuse>
+      <specular>0.0 0.0 0.0 1</specular>
+      <direction>0.5 -0.3 -1.0</direction>
+    </light>
+
+    <!-- ================================================================
+         BAKKE - stor ytre plate, gress/jord-farge
+         ================================================================ -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>20 20</size></plane>
+          </geometry>
+          <surface>
+            <friction>
+              <!-- Vanlig jordfriksjon (lavere enn regolith). -->
+              <ode><mu>1.15</mu><mu2>1.15</mu2></ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>20 20</size></plane>
+          </geometry>
+          <material>
+            <ambient>0.25 0.40 0.20 1</ambient>
+            <diffuse>0.40 0.65 0.30 1</diffuse>
+            <specular>0.05 0.05 0.05 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ================================================================
+         Hjoerne-stolper i fire ulike, kraftige farger.
+         Visuelle landemerker som hjelper RTAB-Map med "features" (demper
+         "Missing visual features"-advarslene i lavtekstur-bakke). Ingen
+         kollisjon — disse er ikke hindringer for navigasjonen.
+         ================================================================ -->
+    <model name="corner_post_ne">
+      <static>true</static>
+      <pose>2.5 2.0 0.25 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><cylinder><radius>0.04</radius><length>0.5</length></cylinder></geometry>
+          <material>
+            <ambient>0.8 0.15 0.15 1</ambient>
+            <diffuse>1.0 0.20 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="corner_post_nw">
+      <static>true</static>
+      <pose>-2.5 2.0 0.25 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><cylinder><radius>0.04</radius><length>0.5</length></cylinder></geometry>
+          <material>
+            <ambient>0.15 0.40 0.85 1</ambient>
+            <diffuse>0.20 0.50 1.00 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="corner_post_se">
+      <static>true</static>
+      <pose>2.5 -2.0 0.25 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><cylinder><radius>0.04</radius><length>0.5</length></cylinder></geometry>
+          <material>
+            <ambient>0.85 0.70 0.15 1</ambient>
+            <diffuse>1.00 0.85 0.25 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="corner_post_sw">
+      <static>true</static>
+      <pose>-2.5 -2.0 0.25 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><cylinder><radius>0.04</radius><length>0.5</length></cylinder></geometry>
+          <material>
+            <ambient>0.15 0.65 0.30 1</ambient>
+            <diffuse>0.20 0.85 0.40 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ================================================================
+         INGEN INDRE HINDRINGER.
+         Tidligere ``moon_rock_1..4``, ``crater_rim`` og
+         ``regolith_mound`` er fjernet etter brukerforesporsel. Hvis du
+         vil legge til hindringer for nav2/frontier-eksperimenter, sett
+         dem inn her igjen.
+         ================================================================ -->
+
+  </world>
+</sdf>

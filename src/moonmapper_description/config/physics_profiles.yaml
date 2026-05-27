@@ -1,0 +1,51 @@
+# Fysikkprofiler for Gazebo-sim.
+earth_6wd:
+  simple_collision_debug: true
+  wheel_mu1: 4.0
+  wheel_mu2: 4.0
+  wheel_use_fdir1: false
+  wheel_kp: 5000.0
+  wheel_kd: 65.0
+  rocker_diff_coupling_mode: weak
+  spawn_z: 0.030
+
+# earth_stable_6wd: balansert langs-frem og side-slip for skid-steer (ingen tipping).
+earth_stable_6wd:
+  simple_collision_debug: true
+  wheel_mu1: 1.5
+  wheel_mu2: 0.8
+  wheel_use_fdir1: true
+  wheel_kp: 8000.0
+  wheel_kd: 80.0
+  rocker_diff_coupling_mode: weak
+  spawn_z: 0.030
+
+safe_6wd:
+  simple_collision_debug: true
+  wheel_mu1: 4.0
+  wheel_mu2: 4.0
+  wheel_use_fdir1: false
+  wheel_kp: 5000.0
+  wheel_kd: 65.0
+  rocker_diff_coupling_mode: weak
+  spawn_z: 0.030
+
+realistic_6wd:
+  simple_collision_debug: false
+  wheel_mu1: 1.25
+  wheel_mu2: 1.15
+  wheel_use_fdir1: false
+  wheel_kp: 12000.0
+  wheel_kd: 40.0
+  rocker_diff_coupling_mode: weak
+  spawn_z: 0.020
+
+debug_low_friction:
+  simple_collision_debug: true
+  wheel_mu1: 0.35
+  wheel_mu2: 0.30
+  wheel_use_fdir1: false
+  wheel_kp: 12000.0
+  wheel_kd: 40.0
+  rocker_diff_coupling_mode: "off"
+  spawn_z: 0.026

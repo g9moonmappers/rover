@@ -1,0 +1,142 @@
+<?xml version="1.0" ?>
+<!--
+  Earth-gravity 6WD skid-steer validation arena (Gazebo Sim 8).
+
+  Purpose: high normal force + high ground friction for rotate/arc motion tests
+  (contrast with low-g moon/regolith scenarios). Layout mirrors moon_arena: flat
+  20x20 m plate, four corner visual posts (no collision).
+-->
+<sdf version="1.11">
+  <world name="earth_arena">
+
+    <physics name="1ms" type="dartsim">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-contact-system"
+            name="gz::sim::systems::Contact"/>
+    <plugin filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system"
+            name="gz::sim::systems::Imu"/>
+
+    <gravity>0 0 -9.81</gravity>
+
+    <scene>
+      <ambient>0.45 0.45 0.50 1</ambient>
+      <background>0.55 0.75 0.95 1</background>
+      <shadows>true</shadows>
+      <grid>false</grid>
+      <sky/>
+    </scene>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>1.0 0.97 0.92 1</diffuse>
+      <specular>0.5 0.5 0.5 1</specular>
+      <direction>-0.4 0.3 -1.0</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>20 20</size></plane>
+          </geometry>
+          <surface>
+            <friction>
+              <!-- Moderate mu: high isotropic mu can tip 6WD during in-place rotation. -->
+              <ode>
+                <mu>1.2</mu>
+                <mu2>1.2</mu2>
+              </ode>
+            </friction>
+            <contact>
+              <ode>
+                <kp>1000000.0</kp>
+                <kd>100.0</kd>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>20 20</size></plane>
+          </geometry>
+          <material>
+            <ambient>0.35 0.35 0.38 1</ambient>
+            <diffuse>0.55 0.55 0.58 1</diffuse>
+            <specular>0.08 0.08 0.08 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="corner_post_ne">
+      <static>true</static>
+      <pose>2.5 2.0 0.25 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><cylinder><radius>0.04</radius><length>0.5</length></cylinder></geometry>
+          <material>
+            <ambient>0.8 0.15 0.15 1</ambient>
+            <diffuse>1.0 0.20 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="corner_post_nw">
+      <static>true</static>
+      <pose>-2.5 2.0 0.25 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><cylinder><radius>0.04</radius><length>0.5</length></cylinder></geometry>
+          <material>
+            <ambient>0.15 0.40 0.85 1</ambient>
+            <diffuse>0.20 0.50 1.00 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="corner_post_se">
+      <static>true</static>
+      <pose>2.5 -2.0 0.25 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><cylinder><radius>0.04</radius><length>0.5</length></cylinder></geometry>
+          <material>
+            <ambient>0.85 0.70 0.15 1</ambient>
+            <diffuse>1.00 0.85 0.25 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="corner_post_sw">
+      <static>true</static>
+      <pose>-2.5 -2.0 0.25 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><cylinder><radius>0.04</radius><length>0.5</length></cylinder></geometry>
+          <material>
+            <ambient>0.15 0.65 0.30 1</ambient>
+            <diffuse>0.20 0.85 0.40 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

@@ -1,0 +1,108 @@
+# Topic-bridge mellom Gazebo Transport og ROS 2.
+
+- ros_topic_name: /clock
+  gz_topic_name: /clock
+  ros_type_name: rosgraph_msgs/msg/Clock
+  gz_type_name: gz.msgs.Clock
+  direction: GZ_TO_ROS
+
+# /cmd_vel skal IKKE broes til GZ når ros2_control og diff_drive styrer hjul-hastighet.
+
+# Sensorer
+
+# IMU (100 Hz)
+- ros_topic_name: /imu/data
+  gz_topic_name: /imu
+  ros_type_name: sensor_msgs/msg/Imu
+  gz_type_name: gz.msgs.IMU
+  direction: GZ_TO_ROS
+
+# Stereo: venstre kamera
+- ros_topic_name: /stereo/left/image_raw
+  gz_topic_name: /stereo/left/image_raw
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /stereo/left/camera_info
+  gz_topic_name: /stereo/left/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: gz.msgs.CameraInfo
+  direction: GZ_TO_ROS
+
+# Stereo: hoeyre kamera
+- ros_topic_name: /stereo/right/image_raw
+  gz_topic_name: /stereo/right/image_raw
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /stereo/right/camera_info
+  gz_topic_name: /stereo/right/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: gz.msgs.CameraInfo
+  direction: GZ_TO_ROS
+
+# RGB-D / Depth-kamera type=rgbd_camera i Gazebo Sim
+# Publiserer RGB, depth-bilde, punktsky og camera_info samtidig.
+- ros_topic_name: /depth_camera/image
+  gz_topic_name: /depth_camera/image
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /depth_camera/depth_image
+  gz_topic_name: /depth_camera/depth_image
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /depth_camera/points
+  gz_topic_name: /depth_camera/points
+  ros_type_name: sensor_msgs/msg/PointCloud2
+  gz_type_name: gz.msgs.PointCloudPacked
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /depth_camera/camera_info
+  gz_topic_name: /depth_camera/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: gz.msgs.CameraInfo
+  direction: GZ_TO_ROS
+
+# Depth alias Level 1 topic scheme
+- ros_topic_name: /depth/image_raw
+  gz_topic_name: /depth_camera/image
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /depth/image_depth
+  gz_topic_name: /depth_camera/depth_image
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /depth/points
+  gz_topic_name: /depth_camera/points
+  ros_type_name: sensor_msgs/msg/PointCloud2
+  gz_type_name: gz.msgs.PointCloudPacked
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /depth/camera_info
+  gz_topic_name: /depth_camera/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: gz.msgs.CameraInfo
+  direction: GZ_TO_ROS
+
+# Mikroskop Level 1
+- ros_topic_name: /microscope/image_raw
+  gz_topic_name: /microscope/image_raw
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /microscope/camera_info
+  gz_topic_name: /microscope/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: gz.msgs.CameraInfo
+  direction: GZ_TO_ROS

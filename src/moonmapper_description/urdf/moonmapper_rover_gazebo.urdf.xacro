@@ -1,0 +1,480 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="moonmapper_gz">
+
+  <!--  Argumenter (foer include)  -->
+  <xacro:arg name="enable_triad_spectroscopy" default="false"/>
+  <xacro:arg name="rocker_diff_coupling_mode" default="weak"/>
+  <xacro:arg name="rocker_diff_debug" default="false"/>
+  <xacro:arg name="rocker_diff_print_interval" default="0.5"/>
+  <xacro:arg name="wheel_mu1" default="0.12"/>
+  <xacro:arg name="wheel_mu2" default="2.35"/>
+  <xacro:arg name="wheel_kp" default="9000.0"/>
+  <xacro:arg name="wheel_kd" default="55.0"/>
+  <xacro:arg name="wheel_use_fdir1" default="true"/>
+
+  <!--  Base-URDF  -->
+  <xacro:include filename="$(find moonmapper_description)/urdf/moonmapper_rover.urdf.xacro"/>
+
+  <!--  Makro: hjul-kontakt  -->
+  <xacro:macro name="wheel_gazebo" params="link">
+    <gazebo reference="${link}">
+      <mu1>$(arg wheel_mu1)</mu1>
+      <mu2>$(arg wheel_mu2)</mu2>
+      <kp>$(arg wheel_kp)</kp>
+      <kd>$(arg wheel_kd)</kd>
+      <minDepth>0.0005</minDepth>
+      <maxVel>25.0</maxVel>
+      <xacro:if value="$(arg wheel_use_fdir1)">
+        <fdir1>0 1 0</fdir1>
+      </xacro:if>
+      <selfCollide>false</selfCollide>
+      <surface>
+        <friction>
+          <ode>
+            <mu>$(arg wheel_mu2)</mu>
+            <mu2>$(arg wheel_mu2)</mu2>
+            <slip1>0.0</slip1>
+            <slip2>0.0</slip2>
+            <xacro:if value="$(arg wheel_use_fdir1)">
+              <fdir1>0 1 0</fdir1>
+            </xacro:if>
+          </ode>
+        </friction>
+        <contact>
+          <ode>
+            <kp>$(arg wheel_kp)</kp>
+            <kd>$(arg wheel_kd)</kd>
+            <min_depth>0.0005</min_depth>
+            <max_vel>25.0</max_vel>
+          </ode>
+        </contact>
+      </surface>
+    </gazebo>
+  </xacro:macro>
+
+  <!--  Hjul-friksjon  -->
+  <xacro:wheel_gazebo link="wheel_l1_link"/>
+  <xacro:wheel_gazebo link="wheel_l2_link"/>
+  <xacro:wheel_gazebo link="wheel_l3_link"/>
+  <xacro:wheel_gazebo link="wheel_r1_link"/>
+  <xacro:wheel_gazebo link="wheel_r2_link"/>
+  <xacro:wheel_gazebo link="wheel_r3_link"/>
+
+  <!--  Suspensjon: joint-innstillinger  -->
+  <gazebo reference="rocker_left_joint">
+    <implicitSpringDamper>false</implicitSpringDamper>
+    <provideFeedback>true</provideFeedback>
+  </gazebo>
+
+  <gazebo reference="rocker_right_joint">
+    <implicitSpringDamper>false</implicitSpringDamper>
+    <provideFeedback>true</provideFeedback>
+  </gazebo>
+
+  <gazebo reference="bogie_left_joint">
+    <implicitSpringDamper>false</implicitSpringDamper>
+  </gazebo>
+
+  <gazebo reference="bogie_right_joint">
+    <implicitSpringDamper>false</implicitSpringDamper>
+    <provideFeedback>true</provideFeedback>
+  </gazebo>
+
+  <gazebo reference="rocker_bogie_diff_joint">
+    <implicitSpringDamper>false</implicitSpringDamper>
+    <provideFeedback>true</provideFeedback>
+  </gazebo>
+
+  <!-- Push-stag: fixed i sim (prisme kun i RViz uten use_gazebo) -->
+  <xacro:unless value="$(arg use_gazebo)">
+    <gazebo reference="feste_mellom_feste_og_stang_right_joint">
+      <implicitSpringDamper>false</implicitSpringDamper>
+      <provideFeedback>true</provideFeedback>
+    </gazebo>
+
+    <gazebo reference="stang_right_joint">
+      <implicitSpringDamper>false</implicitSpringDamper>
+      <provideFeedback>true</provideFeedback>
+    </gazebo>
+
+    <gazebo reference="feste_mellom_feste_og_stang_left_joint">
+      <implicitSpringDamper>false</implicitSpringDamper>
+      <provideFeedback>true</provideFeedback>
+    </gazebo>
+
+    <gazebo reference="stang_left_joint">
+      <implicitSpringDamper>false</implicitSpringDamper>
+      <provideFeedback>true</provideFeedback>
+    </gazebo>
+  </xacro:unless>
+
+  <!--  Link: kollisjon / self-collide  -->
+  <gazebo reference="base_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <xacro:if value="$(arg simple_collision_debug)">
+    <gazebo reference="rocker_left_link">
+      <selfCollide>false</selfCollide>
+    </gazebo>
+    <gazebo reference="rocker_right_link">
+      <selfCollide>false</selfCollide>
+    </gazebo>
+    <gazebo reference="bogie_left_link">
+      <selfCollide>false</selfCollide>
+    </gazebo>
+    <gazebo reference="bogie_right_link">
+      <selfCollide>false</selfCollide>
+    </gazebo>
+    <gazebo reference="rocker_bogie_diff_link">
+      <selfCollide>false</selfCollide>
+    </gazebo>
+    <gazebo reference="tak_liten_link">
+      <selfCollide>false</selfCollide>
+    </gazebo>
+  </xacro:if>
+
+  <!--  ros2_control  -->
+  <ros2_control name="MoonMapperSystem" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+
+    <xacro:macro name="wheel_iface" params="joint">
+      <joint name="${joint}">
+        <command_interface name="velocity">
+          <param name="min">-30.0</param>
+          <param name="max">30.0</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <state_interface name="effort"/>
+      </joint>
+    </xacro:macro>
+
+    <xacro:wheel_iface joint="wheel_l1_joint"/>
+    <xacro:wheel_iface joint="wheel_l2_joint"/>
+    <xacro:wheel_iface joint="wheel_l3_joint"/>
+    <xacro:wheel_iface joint="wheel_r1_joint"/>
+    <xacro:wheel_iface joint="wheel_r2_joint"/>
+    <xacro:wheel_iface joint="wheel_r3_joint"/>
+
+    <!-- Passive ledd: kun state (joint_state_broadcaster) -->
+    <joint name="rocker_left_joint">
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="rocker_right_joint">
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="bogie_left_joint">
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="bogie_right_joint">
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="rocker_bogie_diff_joint">
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <xacro:unless value="$(arg use_gazebo)">
+      <joint name="feste_mellom_feste_og_stang_right_joint">
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <joint name="stang_right_joint">
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <joint name="feste_mellom_feste_og_stang_left_joint">
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <joint name="stang_left_joint">
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+    </xacro:unless>
+  </ros2_control>
+
+  <!--  Gazebo system-plugins  -->
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <hold_joints>false</hold_joints>
+      <parameters>$(find moonmapper_description)/config/wheel_controllers.yaml</parameters>
+    </plugin>
+
+    <!-- Walking-beam + diff-stav (RockerBogieDifferential.cc) -->
+    <plugin filename="libmoonmapper_rocker_bogie_differential.so" name="moonmapper::RockerBogieDifferential">
+      <enable>true</enable>
+      <coupling_mode>$(arg rocker_diff_coupling_mode)</coupling_mode>
+      <debug>$(arg rocker_diff_debug)</debug>
+      <print_interval>$(arg rocker_diff_print_interval)</print_interval>
+      <left_rocker_joint>rocker_left_joint</left_rocker_joint>
+      <right_rocker_joint>rocker_right_joint</right_rocker_joint>
+      <diff_joint>rocker_bogie_diff_joint</diff_joint>
+      <left_bogie_joint>bogie_left_joint</left_bogie_joint>
+      <right_bogie_joint>bogie_right_joint</right_bogie_joint>
+      <kp>28.0</kp>
+      <kd>6.5</kd>
+      <max_torque>2.4</max_torque>
+      <right_sign>1.0</right_sign>
+      <k_diff_L>-0.41</k_diff_L>
+      <k_diff_R>0.41</k_diff_R>
+      <k_diff_0>0.0</k_diff_0>
+      <kp_aux>6.5</kp_aux>
+      <kd_aux>1.5</kd_aux>
+      <max_torque_aux>0.45</max_torque_aux>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher"/>
+
+    <plugin filename="gz-sim-pose-publisher-system" name="gz::sim::systems::PosePublisher">
+      <publish_link_pose>false</publish_link_pose>
+      <publish_collision_pose>false</publish_collision_pose>
+      <publish_visual_pose>false</publish_visual_pose>
+      <publish_nested_model_pose>true</publish_nested_model_pose>
+    </plugin>
+
+    <!-- Arkivert pakke: moonmapper_gz_sensors -->
+    <xacro:if value="$(arg enable_triad_spectroscopy)">
+      <plugin filename="libmoonmapper_triad_spectroscopy.so" name="moonmapper::TriadSpectroscopy">
+        <enable>true</enable>
+        <update_rate_hz>20</update_rate_hz>
+        <max_distance>0.12</max_distance>
+        <noise_stddev>0.02</noise_stddev>
+        <channels>18</channels>
+        <sensor1_link>triad_sensor_1_link</sensor1_link>
+        <sensor2_link>triad_sensor_2_link</sensor2_link>
+        <topic1>/triad_sensor_1/spectrum</topic1>
+        <topic2>/triad_sensor_2/spectrum</topic2>
+        <material_map_yaml>$(find moonmapper_gz_sensors)/config/triad_material_map.yaml</material_map_yaml>
+      </plugin>
+    </xacro:if>
+  </gazebo>
+
+  <!--  Sensorer pa base_link  -->
+  <!-- Pose = URDF TF-kjede i base_link. gz_frame_id matcher optical/link frames. -->
+
+  <gazebo reference="base_link">
+    <sensor name="imu_sensor" type="imu">
+      <pose>0.001234 -0.000060 0.003194 0 0 0</pose>
+      <always_on>true</always_on>
+      <update_rate>100</update_rate>
+      <topic>imu</topic>
+      <gz_frame_id>imu_link</gz_frame_id>
+      <imu>
+        <angular_velocity>
+          <x>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.002</stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.002</stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.002</stddev>
+            </noise>
+          </z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.017</stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.017</stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.017</stddev>
+            </noise>
+          </z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
+
+    <sensor name="stereo_left_camera" type="camera">
+      <pose>0.198393 0.039044 0.071375 0 0 0</pose>
+      <always_on>true</always_on>
+      <update_rate>15</update_rate>
+      <topic>stereo/left/image_raw</topic>
+      <gz_frame_id>stereo_left_optical_frame</gz_frame_id>
+      <camera>
+        <horizontal_fov>1.2217305</horizontal_fov>
+        <image>
+          <width>320</width>
+          <height>240</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.005</near>
+          <far>50.0</far>
+        </clip>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.005</stddev>
+        </noise>
+        <optical_frame_id>stereo_left_optical_frame</optical_frame_id>
+      </camera>
+    </sensor>
+
+    <sensor name="stereo_right_camera" type="camera">
+      <pose>0.198393 -0.027090 0.071375 0 0 0</pose>
+      <always_on>true</always_on>
+      <update_rate>15</update_rate>
+      <topic>stereo/right/image_raw</topic>
+      <gz_frame_id>stereo_right_optical_frame</gz_frame_id>
+      <camera>
+        <horizontal_fov>1.2217305</horizontal_fov>
+        <image>
+          <width>320</width>
+          <height>240</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.005</near>
+          <far>50.0</far>
+        </clip>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.005</stddev>
+        </noise>
+        <optical_frame_id>stereo_right_optical_frame</optical_frame_id>
+      </camera>
+    </sensor>
+
+    <sensor name="depth_camera" type="rgbd_camera">
+      <pose>0.205192 0.006958 0.071375 0 0 0</pose>
+      <always_on>true</always_on>
+      <update_rate>15</update_rate>
+      <topic>depth_camera</topic>
+      <gz_frame_id>depth_camera_optical_frame</gz_frame_id>
+      <camera>
+        <horizontal_fov>1.2217305</horizontal_fov>
+        <image>
+          <width>320</width>
+          <height>240</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.05</near>
+          <far>10.0</far>
+        </clip>
+        <depth_camera>
+          <clip>
+            <near>0.05</near>
+            <far>10.0</far>
+          </clip>
+        </depth_camera>
+        <optical_frame_id>depth_camera_optical_frame</optical_frame_id>
+      </camera>
+    </sensor>
+
+    <sensor name="microscope_camera" type="camera">
+      <pose>0.091849 0.001046 -0.006375 0 0 0</pose>
+      <always_on>true</always_on>
+      <update_rate>10</update_rate>
+      <topic>microscope/image_raw</topic>
+      <gz_frame_id>mikroskop_optical_frame</gz_frame_id>
+      <camera>
+        <horizontal_fov>1.0471975512</horizontal_fov>
+        <image>
+          <width>320</width>
+          <height>240</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.005</near>
+          <far>0.25</far>
+        </clip>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.003</stddev>
+        </noise>
+        <optical_frame_id>mikroskop_optical_frame</optical_frame_id>
+      </camera>
+    </sensor>
+  </gazebo>
+
+  <!--  Link: self-collide av (dekor / TF-only)  -->
+  <gazebo reference="stereo_camera_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <gazebo reference="rocker_bogie_diff_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <gazebo reference="stang_left_tip_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <gazebo reference="stang_right_tip_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <gazebo reference="tak_liten_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <gazebo reference="feste_rocker_karosseri_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <gazebo reference="feste_mellom_feste_og_stang_right_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <gazebo reference="stang_right_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <gazebo reference="feste_mellom_feste_og_stang_left_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <gazebo reference="stang_left_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <gazebo reference="halleffekt_sensor_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <gazebo reference="triad_sensor_1_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <gazebo reference="triad_sensor_2_link">
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+</robot>

@@ -1,0 +1,347 @@
+<?xml version="1.0" ?>
+<!--
+  Earth exploration arena: 3 m x 6 m (18 m²) walled box inside a 20x20 m ground plane.
+  world_preset:=earth_explore via gazebo_rover.launch.py — robot spawns near (0,0).
+-->
+<sdf version="1.11">
+  <world name="earth_arena_explore">
+
+    <physics name="1ms" type="dartsim">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-contact-system"
+            name="gz::sim::systems::Contact"/>
+    <plugin filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system"
+            name="gz::sim::systems::Imu"/>
+
+    <gravity>0 0 -9.81</gravity>
+
+    <scene>
+      <ambient>0.45 0.45 0.50 1</ambient>
+      <background>0.55 0.75 0.95 1</background>
+      <shadows>true</shadows>
+      <grid>false</grid>
+      <sky/>
+    </scene>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>1.0 0.97 0.92 1</diffuse>
+      <specular>0.5 0.5 0.5 1</specular>
+      <direction>-0.4 0.3 -1.0</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>20 20</size></plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1.2</mu>
+                <mu2>1.2</mu2>
+              </ode>
+            </friction>
+            <contact>
+              <ode>
+                <kp>1000000.0</kp>
+                <kd>100.0</kd>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>20 20</size></plane>
+          </geometry>
+          <material>
+            <ambient>0.35 0.35 0.38 1</ambient>
+            <diffuse>0.55 0.55 0.58 1</diffuse>
+            <specular>0.08 0.08 0.08 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 3 x 6 m boundary walls (x: -1.5..1.5, y: -3..3) -->
+    <model name="arena_wall_north">
+      <static>true</static>
+      <pose>0 3.06 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>3.24 0.12 0.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>3.24 0.12 0.5</size></box></geometry>
+          <material>
+            <ambient>0.55 0.25 0.20 1</ambient>
+            <diffuse>0.78 0.35 0.28 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="arena_wall_south">
+      <static>true</static>
+      <pose>0 -3.06 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>3.24 0.12 0.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>3.24 0.12 0.5</size></box></geometry>
+          <material>
+            <ambient>0.20 0.35 0.55 1</ambient>
+            <diffuse>0.28 0.48 0.78 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="arena_wall_east">
+      <static>true</static>
+      <pose>1.56 0 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.12 6.24 0.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.12 6.24 0.5</size></box></geometry>
+          <material>
+            <ambient>0.45 0.50 0.22 1</ambient>
+            <diffuse>0.62 0.70 0.30 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="arena_wall_west">
+      <static>true</static>
+      <pose>-1.56 0 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.12 6.24 0.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.12 6.24 0.5</size></box></geometry>
+          <material>
+            <ambient>0.42 0.28 0.52 1</ambient>
+            <diffuse>0.58 0.38 0.72 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Corner posts at (±1.5, ±3) with collision -->
+    <model name="corner_post_ne">
+      <static>true</static>
+      <pose>1.5 3.0 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.05</radius><length>0.5</length></cylinder></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.05</radius><length>0.5</length></cylinder></geometry>
+          <material>
+            <ambient>0.8 0.15 0.15 1</ambient>
+            <diffuse>1.0 0.20 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="corner_post_nw">
+      <static>true</static>
+      <pose>-1.5 3.0 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.05</radius><length>0.5</length></cylinder></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.05</radius><length>0.5</length></cylinder></geometry>
+          <material>
+            <ambient>0.15 0.40 0.85 1</ambient>
+            <diffuse>0.20 0.50 1.00 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="corner_post_se">
+      <static>true</static>
+      <pose>1.5 -3.0 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.05</radius><length>0.5</length></cylinder></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.05</radius><length>0.5</length></cylinder></geometry>
+          <material>
+            <ambient>0.85 0.70 0.15 1</ambient>
+            <diffuse>1.00 0.85 0.25 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="corner_post_sw">
+      <static>true</static>
+      <pose>-1.5 -3.0 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.05</radius><length>0.5</length></cylinder></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.05</radius><length>0.5</length></cylinder></geometry>
+          <material>
+            <ambient>0.15 0.65 0.30 1</ambient>
+            <diffuse>0.20 0.85 0.40 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Static rocks (Nav2 / lidar obstacles), clear of spawn at origin -->
+    <model name="rock_01">
+      <static>true</static>
+      <pose>0.85 1.6 0.18 0 0 0.3</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.38 0.32 0.36</size></box></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><box><size>0.38 0.32 0.36</size></box></geometry>
+          <material>
+            <ambient>0.35 0.32 0.30 1</ambient>
+            <diffuse>0.50 0.46 0.42 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="rock_02">
+      <static>true</static>
+      <pose>-0.75 -1.35 0.14 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.22</radius><length>0.28</length></cylinder></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.22</radius><length>0.28</length></cylinder></geometry>
+          <material>
+            <ambient>0.38 0.34 0.32 1</ambient>
+            <diffuse>0.52 0.48 0.44 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="rock_03">
+      <static>true</static>
+      <pose>0.55 -2.1 0.16 0 0.1 0.5</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.42 0.28 0.32</size></box></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><box><size>0.42 0.28 0.32</size></box></geometry>
+          <material>
+            <ambient>0.40 0.36 0.33 1</ambient>
+            <diffuse>0.55 0.50 0.46 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="rock_04">
+      <static>true</static>
+      <pose>-1.05 2.15 0.15 0 0 0.2</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.18</radius><length>0.30</length></cylinder></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.18</radius><length>0.30</length></cylinder></geometry>
+          <material>
+            <ambient>0.36 0.33 0.31 1</ambient>
+            <diffuse>0.48 0.45 0.42 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="rock_05">
+      <static>true</static>
+      <pose>-0.35 2.45 0.13 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.30 0.26 0.26</size></box></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><box><size>0.30 0.26 0.26</size></box></geometry>
+          <material>
+            <ambient>0.42 0.38 0.35 1</ambient>
+            <diffuse>0.58 0.52 0.48 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="rock_06">
+      <static>true</static>
+      <pose>1.05 -2.35 0.14 0 0 0.4</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.20</radius><length>0.28</length></cylinder></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.20</radius><length>0.28</length></cylinder></geometry>
+          <material>
+            <ambient>0.37 0.34 0.32 1</ambient>
+            <diffuse>0.50 0.46 0.43 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="rock_07">
+      <static>true</static>
+      <pose>-1.15 -2.05 0.17 0 0.2 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.34 0.40 0.34</size></box></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><box><size>0.34 0.40 0.34</size></box></geometry>
+          <material>
+            <ambient>0.39 0.35 0.33 1</ambient>
+            <diffuse>0.53 0.49 0.45 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="rock_08">
+      <static>true</static>
+      <pose>0.95 0.55 0.12 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.28 0.35 0.24</size></box></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><box><size>0.28 0.35 0.24</size></box></geometry>
+          <material>
+            <ambient>0.41 0.37 0.34 1</ambient>
+            <diffuse>0.56 0.51 0.47 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>
