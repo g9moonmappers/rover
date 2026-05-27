@@ -1,0 +1,76 @@
+# Expo 20x20 (world_preset:=expo_20x20) — raskere frontier-utforsking, lavere BFS-terskel.
+frontier_explorer:
+  ros__parameters:
+    use_sim_time: true
+    map_topic: /map
+    map_frame: map
+    base_frame: base_footprint
+    navigate_action: /navigate_to_pose
+    cmd_vel_topic: /cmd_vel_raw
+
+    min_goal_distance: 1.2
+    min_goal_distance_m: 1.2
+    preferred_goal_distance_m: 3.0
+    max_goal_distance_m: 7.0
+    max_goal_distance_stage_m: 7.0
+    goal_timeout_sec: 90.0
+
+    min_time_between_goal_picks_sec: 0.25
+    min_pause_after_success_sec: 0.15
+    min_nav_commit_sec: 1.5
+    min_travel_after_goal_m: 0.35
+    failure_retry_delay_sec: 0.25
+    no_frontier_retry_delay_sec: 0.5
+    recovery_pause_sec: 0.5
+
+    explored_mark_radius_m: 0.85
+    explored_revisit_penalty: 3.5
+    fallback_radius_min_m: 1.0
+    fallback_radius_max_m: 5.0
+
+    return_home_on_completion: false
+    enable_return_home_on_complete: false
+    return_home_enabled: false
+    completion_check_enabled: false
+    max_unknown_fraction_complete: 0.35
+    reachable_unknown_threshold_ratio: 0.30
+    min_exploration_time_sec: 120.0
+    completion_no_frontier_attempts: 25
+    max_no_frontier_retries: 12
+    retry_when_no_frontier: true
+    max_rescan_cycles: 24
+    max_recovery_cycles: 10
+    max_search_attempts_before_recovery: 3
+
+    integrated_initial_spin: true
+    initial_spin_max_duration_sec: 12.0
+    initial_spin_target_rad: 3.14
+    initial_spin_angular_z: 0.35
+    initial_spin_direct_cmd_vel: true
+    initial_spin_cmd_vel_topic: /cmd_vel
+    map_settle_after_spin_sec: 1.0
+    explore_immediately_after_spin: true
+
+    min_reachable_cells_for_bfs: 60
+    bfs_bridge_known_free_radius_m: 4.0
+    bfs_seed_search_radius_m: 5.0
+    nearest_seed_search_radius_m: 1.0
+    robot_seed_clear_radius_m: 0.40
+    blacklist_radius_m: 1.0
+    blacklist_duration_sec: 60.0
+
+    nav2_ready_timeout_sec: 180.0
+    nav2_action_wait_sec: 4.0
+    start_delay_sec: 2.0
+
+    enable_nav_stuck_detection: true
+    stuck_timeout_sec: 18.0
+    min_progress_m: 0.20
+    stuck_blocked_cancel_sec: 3.0
+
+    enable_too_close_recovery: true
+    too_close_distance_m: 0.18
+    too_close_sustain_sec: 2.0
+
+    publish_markers: true
+    publish_debug_markers: false

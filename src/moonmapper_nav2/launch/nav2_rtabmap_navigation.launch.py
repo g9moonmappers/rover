@@ -7,7 +7,7 @@ import sys
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -17,7 +17,20 @@ from launch_ros.parameter_descriptions import ParameterValue
 _launch_dir = os.path.dirname(os.path.abspath(__file__))
 if _launch_dir not in sys.path:
     sys.path.append(_launch_dir)
-import _nav2_rtabmap_common as _common 
+import _nav2_rtabmap_common as _common
+
+
+def _depth_scan_node(context, *args, **kwargs):
+    preset = (LaunchConfiguration("world_preset").perform(context) or "").strip().lower()
+    expo = preset in ("expo_20x20", "expo")
+    use_sim_time = LaunchConfiguration("use_sim_time")
+    return [
+        _common.depth_to_scan_real(
+            use_sim_time,
+            use_sim_time,
+            expo_profile=expo,
+        )
+    ]
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -55,22 +68,27 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("rviz", default_value="false"),
             DeclareLaunchArgument(
                 "depth_image_topic",
-                default_value="/camera/camera/depth/image_rect_raw",
+                default_value="/depth_camera/depth_image",
             ),
             DeclareLaunchArgument(
                 "camera_info_topic",
-                default_value="/camera/camera/color/camera_info",
+                default_value="/depth_camera/camera_info",
             ),
             DeclareLaunchArgument("safety_stop_distance", default_value="0.20"),
             DeclareLaunchArgument("safety_front_angle_deg", default_value="35.0"),
             DeclareLaunchArgument("safety_scan_timeout_sec", default_value="0.6"),
+            DeclareLaunchArgument(
+                "world_preset",
+                default_value="expo_20x20",
+                description="expo_20x20 velger expo-tilpasset depth_to_scan (ROI/range_max).",
+            ),
             LogInfo(
                 msg=(
                     "[moonmapper_nav2] RTAB Nav2: navigation_launch only "
-                    "(uten map_server/AMCL/identity map-til-odom). Forvent /map fra relay + RTAB map-til-odom TF."
+                    "(uten map_server/AMCL). Forvent /map fra relay + RTAB map->odom TF."
                 )
             ),
-            _common.depth_to_scan_real(use_sim_time, LaunchConfiguration("use_sim_time")),
+            OpaqueFunction(function=_depth_scan_node),
             navigation,
             _common.safety_node_rtabmap(use_sim_time, safety_stop, safety_angle, safety_to),
             Node(

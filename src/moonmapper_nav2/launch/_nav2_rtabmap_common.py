@@ -3,14 +3,71 @@
 
 from __future__ import annotations
 
-from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
 
+def _depth_to_scan_params(*, expo: bool, expo_fast: bool = False) -> dict:
+    """Parametre for depth_to_scan_node (expo: færre inf-stråler, mer vegg-data)."""
+    p = {
+        "scan_topic": "/scan",
+        "scan_height_mode": "roi_percentile",
+        "roi_top_ratio": 0.18,
+        "roi_bottom_ratio": 0.46,
+        "center_crop_ratio": 0.85,
+        "min_valid_points_per_column": 6,
+        "ground_filter_enabled": True,
+        "ground_filter_bottom_roi_ratio": 0.35,
+        "max_obstacle_row_ratio": 0.44,
+        "roi_percentile": 0.22,
+        "front_percentile": 0.22,
+        "depth_min_valid_m": 0.32,
+        "depth_max_valid_m": 6.0,
+        "range_min": 0.20,
+        "range_max": 4.0,
+        "debug_log_period_sec": 1.0,
+        "scan_time": 0.1,
+        "output_frame_id": "depth_camera_optical_frame",
+    }
+    if expo:
+        p.update(
+            {
+                "scan_height": 40,
+                "roi_top_ratio": 0.30,
+                "roi_bottom_ratio": 0.52,
+                "max_obstacle_row_ratio": 0.50,
+                "center_crop_ratio": 0.88,
+                "min_valid_points_per_column": 2,
+                "depth_min_valid_m": 0.18,
+                "ground_min_obstacle_range_m": 0.28,
+                "depth_max_valid_m": 5.0,
+                "range_min": 0.22,
+                "range_max": 5.0,
+                "ground_filter_bottom_roi_ratio": 0.25,
+                "ground_ignore_enabled": True,
+                "ground_max_down_angle_deg": 12.0,
+                "ground_max_range_m": 3.5,
+                "ground_min_obstacle_range_m": 0.45,
+            }
+        )
+    if expo_fast:
+        p.update(
+            {
+                "scan_height": 60,
+                "range_max": 5.5,
+                "depth_max_valid_m": 5.5,
+            }
+        )
+    return p
+
+
 def depth_to_scan_real(
-    use_sim_time: LaunchConfiguration, _unused: LaunchConfiguration
+    use_sim_time: LaunchConfiguration,
+    _unused: LaunchConfiguration,
+    *,
+    expo_profile: bool = False,
+    expo_fast_profile: bool = False,
 ) -> Node:
     """depth_to_scan from launch-configured depth/camera_info topics."""
     return Node(
@@ -27,24 +84,10 @@ def depth_to_scan_real(
                 "camera_info_topic": ParameterValue(
                     LaunchConfiguration("camera_info_topic"), value_type=str
                 ),
-                "scan_topic": "/scan",
-                "scan_height_mode": "roi_percentile",
-                "roi_top_ratio": 0.42,
-                "roi_bottom_ratio": 0.58,
-                "center_crop_ratio": 0.88,
-                "min_valid_points_per_column": 10,
-                "ground_filter_enabled": True,
-                "ground_filter_bottom_roi_ratio": 0.28,
-                "roi_percentile": 0.18,
-                "front_percentile": 0.18,
-                "depth_min_valid_m": 0.32,
-                "depth_max_valid_m": 4.0,
-                "range_min": 0.22,
-                "range_max": 3.5,
-                "debug_log_period_sec": 1.0,
-                "scan_time": 0.1,
-                # Bruk depth optical frame (matcher URDF og Gazebo gz_frame_id.
-                "output_frame_id": "depth_camera_optical_frame",
+                **_depth_to_scan_params(
+                    expo=expo_profile or expo_fast_profile,
+                    expo_fast=expo_fast_profile,
+                ),
             },
         ],
     )
@@ -68,10 +111,10 @@ def safety_node_rtabmap(
                 "output_cmd_topic": "/cmd_vel",
                 "scan_topic": "/scan",
                 "front_stop_distance": ParameterValue(safety_stop, value_type=float),
-                "emergency_stop_distance_m": 0.12,
-                "slowdown_distance_m": 0.38,
-                "range_calibration_offset_m": 0.04,
-                "min_trusted_front_range_m": 0.24,
+                "emergency_stop_distance_m": 0.10,
+                "slowdown_distance_m": 0.55,
+                "range_calibration_offset_m": 0.0,
+                "min_trusted_front_range_m": 0.28,
                 "enable_safety_gating": True,
                 "slow_linear_speed": 0.22,
                 "safe_turn_speed": 0.40,

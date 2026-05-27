@@ -1,7 +1,4 @@
-"""
-rocket-bogie-differential plugin for Gazebo Sim
-"""
-
+// Rocker-bogie differential plugin for Gazebo Sim
 
 #include <gz/common/Console.hh>
 #include <gz/plugin/Register.hh>

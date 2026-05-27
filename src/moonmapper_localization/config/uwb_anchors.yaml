@@ -1,0 +1,33 @@
+# BU04 UWB — sim-only UWB (Gazebo ground truth + ankre i odom).
+# Expo arena: world x,y i [-10,10], spawn SW ~ (-7.5,-7.5) → odom-ankre under.
+#
+# Bruk /** slik at parametre gjelder uavhengig av nodenavn (f.eks. sim_uwb_node).
+
+/**:
+  ros__parameters:
+    use_sim_time: true
+    frame_id: odom
+    base_frame_id: base_footprint
+    ground_truth_topic: /gz/moonmapper_gz/ground_truth
+    ground_truth_child_frame_id: moonmapper_gz
+    source_odom_topic: /diff_drive_controller/odom
+    publish_rate_hz: 20.0
+
+    world_origin_x: -7.5
+    world_origin_y: -7.5
+
+    tag_offset_x: -0.25
+    tag_offset_y: 0.0
+    tag_offset_z: 0.20
+
+    noise_std_x: 0.02
+    noise_std_y: 0.02
+    range_noise_std: 0.04
+    position_covariance: 0.02
+    dropout_probability: 0.0
+    max_jump_m: 2.5
+
+    anchors.BS0: [-9.5, -9.5]
+    anchors.BS1: [-9.5,  9.5]
+    anchors.BS2: [ 9.5, -9.5]
+    anchors.BS3: [ 9.5,  9.5]

@@ -32,6 +32,12 @@ class DepthToScanNode(Node):
         self.declare_parameter("min_valid_points_per_column", 2)
         self.declare_parameter("ground_filter_enabled", True)
         self.declare_parameter("ground_filter_bottom_roi_ratio", 0.12)
+        self.declare_parameter("ground_ignore_enabled", True)
+        self.declare_parameter("ground_max_down_angle_deg", 14.0)
+        self.declare_parameter("ground_max_range_m", 3.0)
+        self.declare_parameter("ground_min_obstacle_range_m", 0.32)
+        # Kun rader over denne andelen av bildehøyden (0.5 = øvre halvdel, unngår bakke).
+        self.declare_parameter("max_obstacle_row_ratio", 1.0)
         self.declare_parameter("roi_percentile", 0.10)
         self.declare_parameter("front_percentile", 0.10)
         self.declare_parameter("depth_min_valid_m", 0.20)
@@ -55,6 +61,12 @@ class DepthToScanNode(Node):
         self._min_pts = max(1, int(self.get_parameter("min_valid_points_per_column").value))
         self._ground_en = bool(self.get_parameter("ground_filter_enabled").value)
         self._ground_skip = max(0.0, min(0.5, float(self.get_parameter("ground_filter_bottom_roi_ratio").value)))
+        self._ground_ignore = bool(self.get_parameter("ground_ignore_enabled").value)
+        self._ground_down_deg = float(self.get_parameter("ground_max_down_angle_deg").value)
+        self._ground_max_r = float(self.get_parameter("ground_max_range_m").value)
+        self._ground_min_obs_r = float(self.get_parameter("ground_min_obstacle_range_m").value)
+        self._ground_down_rad = math.radians(max(1.0, self._ground_down_deg))
+        self._max_row_ratio = max(0.1, min(1.0, float(self.get_parameter("max_obstacle_row_ratio").value)))
         self._pct = max(0.0, min(1.0, float(self.get_parameter("roi_percentile").value)))
         fp = float(self.get_parameter("front_percentile").value)
         self._front_pct = max(0.0, min(1.0, fp if fp > 0.0 else self._pct))
@@ -146,6 +158,19 @@ class DepthToScanNode(Node):
             return zs[idx]
         return zs[0]
 
+    def _is_ground_hit(self, v: int, cy: float, fy: float, z: float) -> bool:
+        """Filtrer nære treff i nedre bildehalvdel (typisk regolith/bakke)."""
+        if not self._ground_ignore or fy <= 1e-6:
+            return False
+        if z > self._ground_max_r:
+            return False
+        if z >= self._ground_min_obs_r:
+            return False
+        if v <= cy:
+            return False
+        down = math.atan2((float(v) - cy) / fy, 1.0)
+        return down >= self._ground_down_rad
+
     def _on_depth(self, msg: Image) -> None:
         if self._ci is None:
             return
@@ -156,12 +181,21 @@ class DepthToScanNode(Node):
 
         fx = float(self._ci.k[0])
         cx = float(self._ci.k[2])
+        fy = float(self._ci.k[4]) if len(self._ci.k) > 4 else fx
         if fx <= 1e-6:
             return
 
         width = int(msg.width)
         height = int(msg.height)
         v0, v1 = self._roi_rows(height)
+        if self._ci is not None and len(self._ci.k) >= 6:
+            cy = float(self._ci.k[5])
+        else:
+            cy = height * 0.5
+        ground_skipped = 0
+        row_cap = int(height * self._max_row_ratio)
+        horizon_cap = int(cy) if self._max_row_ratio < 0.99 else height
+        v1 = min(v1, row_cap, max(v0 + 1, horizon_cap))
 
         margin = (1.0 - self._crop) / 2.0
         u_lo = int(width * margin)
@@ -189,6 +223,9 @@ class DepthToScanNode(Node):
                 if z is None or math.isnan(z) or math.isinf(z):
                     continue
                 if z <= 0.0:
+                    continue
+                if self._is_ground_hit(v, cy, fy, z):
+                    ground_skipped += 1
                     continue
                 zs.append(z)
                 if u == cu:
@@ -224,6 +261,7 @@ class DepthToScanNode(Node):
         if self._debug_period > 0.0 and now - self._last_debug_t >= self._debug_period:
             self._last_debug_t = now
             finite = [r for r in ranges_out if not math.isnan(r) and not math.isinf(r)]
+            n_inf = sum(1 for r in ranges_out if math.isinf(r))
             front = min(finite) if finite else float("nan")
             raw_min = min(all_raw) if all_raw else float("nan")
             p10 = float("nan")
@@ -234,8 +272,11 @@ class DepthToScanNode(Node):
                 med = s[len(s) // 2]
             self.get_logger().info(
                 "DEPTH_TO_SCAN_DEBUG "
-                f"valid_points={len(center_zs)} raw_min={raw_min:.3f} p10={p10:.3f} "
-                f"median={med:.3f} published_front_range={front:.3f} frame={fid}"
+                f"roi_rows={v0}-{v1} enc={msg.encoding} ground_skipped={ground_skipped} "
+                f"valid_points={len(center_zs)} beams_finite={len(finite)}/{len(ranges_out)} "
+                f"beams_inf={n_inf} raw_min={raw_min:.3f} p10={p10:.3f} "
+                f"median={med:.3f} published_front_range={front:.3f} "
+                f"range=[{self._rmin:.2f},{self._rmax:.2f}] frame={fid}"
             )
 
 

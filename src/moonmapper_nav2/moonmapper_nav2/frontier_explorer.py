@@ -36,8 +36,6 @@ from moonmapper_nav2.frontier_exploration_memory import (
 from moonmapper_nav2.frontier_explorer_recovery import (
     RecoveryPhase,
     RecoveryRunner,
-    coverage_stable,
-    map_known_cell_count,
 )
 from moonmapper_nav2.frontier_explorer_debug_bridge import maybe_log_map_robot_diag
 from moonmapper_nav2.frontier_explorer_goal_pick import pick_frontier_goal
@@ -143,8 +141,7 @@ class FrontierExplorer(Node):
         self._recovery_cycles = 0
         self._exploration_t0 = 0.0
         self._select_entered_at = 0.0
-        self._last_known_cells = -1
-        self._coverage_stable_since = 0.0
+        # Coverage-/stabilitetslogikk er fjernet. Utforsking er kun frontier-basert.
         self._nav_progress_xy: Optional[Tuple[float, float]] = None
         self._nav_progress_yaw: Optional[float] = None
         self._nav_progress_t0 = 0.0
@@ -419,22 +416,6 @@ class FrontierExplorer(Node):
         self._home_saved_published = True
         self._transition("SAVE_START_POSE", "nav2_ready")
 
-    def _coverage_debug_log(self, nowm: float) -> None:
-        if self._map is None or len(self._map.data) == 0:
-            return
-        unk = int(self.get_parameter("unknown_value").value)
-        free = int(self.get_parameter("free_threshold").value)
-        occ = int(self.get_parameter("occupied_threshold").value)
-        unk_frac, uk, fr, oc = map_unknown_fraction(self._map.data, unk, free, occ)
-        known = fr + oc
-        delta = 0 if self._last_known_cells < 0 else abs(known - self._last_known_cells)
-        self.get_logger().info(
-            "COVERAGE_DEBUG "
-            f"known_cells={known} free_cells={fr} unknown_cells={uk} "
-            f"reachable_unknown_ratio={unk_frac:.3f} delta_known_cells={delta} "
-            f"no_frontier_attempts={self._search_fail_attempts}"
-        )
-
     def _should_return_home(self, why: str) -> Tuple[bool, str]:
         ret_on = bool(self.get_parameter("return_home_enabled").value) or bool(
             self.get_parameter("enable_return_home_on_complete").value
@@ -458,22 +439,6 @@ class FrontierExplorer(Node):
         max_rec = int(self.get_parameter("max_recovery_cycles").value)
         if self._recovery_cycles < min(max_rec, 1):
             return False, ""
-        if self._map is not None and len(self._map.data) > 0:
-            unk = int(self.get_parameter("unknown_value").value)
-            free = int(self.get_parameter("free_threshold").value)
-            occ = int(self.get_parameter("occupied_threshold").value)
-            known = map_known_cell_count(self._map.data, unk, free, occ)
-            stable, self._coverage_stable_since = coverage_stable(
-                known,
-                self._last_known_cells,
-                self._coverage_stable_since,
-                nowm,
-                int(self.get_parameter("coverage_delta_threshold_cells").value),
-                float(self.get_parameter("coverage_stable_time_sec").value),
-            )
-            self._last_known_cells = known
-            if not stable:
-                return False, ""
         complete, reason = exploration_complete(
             self._last_n_clusters,
             self._last_unknown_fraction,
@@ -481,13 +446,11 @@ class FrontierExplorer(Node):
             int(self.get_parameter("min_frontier_clusters_to_continue").value),
         )
         if complete:
-            self._coverage_debug_log(nowm)
             return True, f"no_frontiers_and_map_stable:{reason}"
         if (
             self._search_fail_attempts >= min_nf
             and self._recovery_cycles >= int(self.get_parameter("max_recovery_cycles").value)
         ):
-            self._coverage_debug_log(nowm)
             return True, "no_frontiers_after_recovery"
         return False, ""
 
@@ -554,6 +517,35 @@ class FrontierExplorer(Node):
         self.get_logger().info(
             f"BACKOUT_MANEUVER duration={dur:.1f}s speed="
             f"{float(self.get_parameter('backout_speed_mps').value):.2f}"
+        )
+
+    def _handle_goal_failed(self, reason: str) -> None:
+        """Blacklist failed goal and schedule retry (recovery/backout or pause)."""
+        self._blacklist_goal()
+        self._obstacle_blocked_since = None
+        obstacle_reasons = (
+            "no_progress_during_navigation",
+            "front blocked too long during navigation",
+            "goal_timeout",
+        )
+        use_backout = bool(
+            self.get_parameter("enable_active_backout_on_failure").value
+        ) or (
+            reason in obstacle_reasons
+            or "blocked" in reason
+            or "obstacle" in reason
+        )
+        if use_backout:
+            self._start_backout()
+            self.get_logger().warn(f"Goal failed ({reason}) — backout, then retry")
+            return
+        delay = float(self.get_parameter("failure_retry_delay_sec").value)
+        self._schedule_next_goal_pick(delay)
+        self._st = _St.PAUSE
+        self._goal_deadline = time.monotonic() + delay
+        self._transition("GOAL_FAILED", reason)
+        self.get_logger().warn(
+            f"Goal failed ({reason}) — blacklisted, retry in {delay:.1f}s"
         )
 
     def _send_nav_goal(self, wx: float, wy: float, yaw: float, after_send: _St = _St.NAV) -> None:

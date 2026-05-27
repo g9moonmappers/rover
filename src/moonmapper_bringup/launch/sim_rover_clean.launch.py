@@ -12,13 +12,16 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description() -> LaunchDescription:
     desc_pkg = FindPackageShare("moonmapper_description")
-    default_world = PathJoinSubstitution([desc_pkg, "worlds", "moon_arena.sdf"])
+    default_world = PathJoinSubstitution(
+        [desc_pkg, "worlds", "earth_arena_expo_20x20.sdf"],
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument(
             "world_preset",
-            default_value="moon",
+            default_value="expo_20x20",
             description=(
+                "Standard: expo_20x20 til earth_arena_expo_20x20 (20x20 expo-arena, spawn SW ~ -7.5,-7.5). "
                 "moon til moon_arena. earth til earth_arena. earth_explore til earth_arena_explore. "
                 "Se gazebo_rover.launch.py for logget gravitasjon/friksjon."
             ),

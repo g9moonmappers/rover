@@ -88,6 +88,10 @@ def _resolve_world_preset(context):
         world_path = os.path.join(desc_share, "worlds", "earth_arena_explore.sdf")
         world_name = "earth_arena_explore"
         default_profile = "earth_stable_6wd"
+    elif preset in ("expo_20x20", "expo"):
+        world_path = os.path.join(desc_share, "worlds", "earth_arena_expo_20x20.sdf")
+        world_name = "earth_arena_expo_20x20"
+        default_profile = "earth_stable_6wd"
     elif preset == "moon":
         world_path = os.path.join(desc_share, "worlds", "moon_arena.sdf")
         world_name = "moon_arena"
@@ -97,7 +101,7 @@ def _resolve_world_preset(context):
             LogInfo(
                 msg=(
                     f"[gazebo_rover] Unknown world_preset='{preset}' "
-                    "(use moon | earth | earth_explore)"
+                    "(use moon | earth | earth_explore | expo_20x20)"
                 ),
             ),
         ]
@@ -108,6 +112,13 @@ def _resolve_world_preset(context):
     profile = (context.launch_configurations.get("physics_profile") or "").strip()
     if not profile:
         actions.append(SetLaunchConfiguration("physics_profile", default_profile))
+    if preset in ("expo_20x20", "expo"):
+        sx = (context.launch_configurations.get("spawn_x") or "").strip()
+        sy = (context.launch_configurations.get("spawn_y") or "").strip()
+        if sx in ("", "0.0", "0"):
+            actions.append(SetLaunchConfiguration("spawn_x", "-7.5"))
+        if sy in ("", "0.0", "0"):
+            actions.append(SetLaunchConfiguration("spawn_y", "-7.5"))
     return actions
 
 # Log world file, gravity, friction, and active physics/xacro keys.
@@ -373,9 +384,10 @@ def generate_launch_description() -> LaunchDescription:
             "world_preset",
             default_value="moon",
             description=(
-                "moon til moon_arena.sdf + safe_6wd (default). "
+                "moon til moon_arena.sdf + safe_6wd. "
                 "earth til earth_arena.sdf. "
                 "earth_explore til earth_arena_explore.sdf. "
+                "expo_20x20 til earth_arena_expo_20x20.sdf (spawn SW ~ -7.5,-7.5). "
                 "Overstyrer world/world_name."
             ),
         ),

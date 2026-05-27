@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
+
+import yaml
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -30,6 +33,28 @@ import _nav2_rtabmap_common as _nav2_common
 def _truthy(s: str) -> bool:
     return s.lower() in ("1", "true", "yes", "on")
 
+
+def _deep_merge(base: dict, overlay: dict) -> None:
+    for key, val in overlay.items():
+        if key in base and isinstance(base[key], dict) and isinstance(val, dict):
+            _deep_merge(base[key], val)
+        else:
+            base[key] = val
+
+
+def _merge_nav2_yaml(base_path: str, overlay_path: str) -> str:
+    with open(base_path, encoding="utf-8") as f:
+        merged = yaml.safe_load(f)
+    with open(overlay_path, encoding="utf-8") as f:
+        _deep_merge(merged, yaml.safe_load(f))
+    tmp = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".yaml", delete=False, encoding="utf-8"
+    )
+    yaml.dump(merged, tmp, default_flow_style=False)
+    tmp.close()
+    return tmp.name
+
+
 # build the launch description
 def _build(context, *args, **kwargs):
     actions: list = []
@@ -45,6 +70,7 @@ def _build(context, *args, **kwargs):
     minimal_dbg = _truthy(LaunchConfiguration("minimal_nav2_debug").perform(context))
     initial_spin = _truthy(LaunchConfiguration("initial_spin").perform(context))
     delete_db = _truthy(LaunchConfiguration("delete_rtabmap_db").perform(context))
+    use_sim_uwb = _truthy(LaunchConfiguration("use_sim_uwb").perform(context))
 
     try:
         nav_delay = float(LaunchConfiguration("navigation_stack_delay").perform(context))
@@ -66,6 +92,8 @@ def _build(context, *args, **kwargs):
     desc_share = get_package_share_directory("moonmapper_description")
     if wp_lower == "earth_explore":
         expected_sdf = os.path.join(desc_share, "worlds", "earth_arena_explore.sdf")
+    elif wp_lower in ("expo_20x20", "expo"):
+        expected_sdf = os.path.join(desc_share, "worlds", "earth_arena_expo_20x20.sdf")
     elif wp_lower == "earth":
         expected_sdf = os.path.join(desc_share, "worlds", "earth_arena.sdf")
     elif wp_lower == "moon":
@@ -84,6 +112,11 @@ def _build(context, *args, **kwargs):
     else:
         params_path = os.path.join(nav2_share, "config", "nav2_params_rtabmap_sim.yaml")
 
+    if wp_lower in ("expo_20x20", "expo"):
+        expo_overlay = os.path.join(nav2_share, "config", "nav2_params_expo_overlay.yaml")
+        if os.path.isfile(expo_overlay):
+            params_path = _merge_nav2_yaml(params_path, expo_overlay)
+
     db_raw = LaunchConfiguration("rtabmap_database_path").perform(context)
     db_path = os.path.expanduser(db_raw)
 
@@ -91,7 +124,10 @@ def _build(context, *args, **kwargs):
     base_frame = LaunchConfiguration("base_frame").perform(context)
     cmd_vel_topic = LaunchConfiguration("cmd_vel_topic").perform(context)
 
-    frontier_yaml = os.path.join(nav2_share, "config", "frontier_explorer.yaml")
+    if wp_lower in ("expo_20x20", "expo"):
+        frontier_yaml = os.path.join(nav2_share, "config", "frontier_explorer_expo.yaml")
+    else:
+        frontier_yaml = os.path.join(nav2_share, "config", "frontier_explorer.yaml")
 
     rviz_nav = "true" if (start_rviz or minimal_dbg) else "false"
 
@@ -102,7 +138,8 @@ def _build(context, *args, **kwargs):
                 "sim på toppnivå (launch-arg scope), "
                 f"RTAB-Map @{slam_start_after_launch}s, "
                 f"Nav2 @{nav_delay}s, explorer @{nav_delay + ex_extra}s "
-                "| earth til earth_arena.sdf, earth_explore til earth_arena_explore.sdf"
+                "| earth til earth_arena.sdf, earth_explore til earth_arena_explore.sdf, "
+                "expo_20x20 til earth_arena_expo_20x20.sdf"
             )
         )
     )
@@ -111,7 +148,8 @@ def _build(context, *args, **kwargs):
             msg=(
                 f"[autonomous_exploration_full] world_preset={wpreset} expected_world_sdf="
                 f"{expected_sdf} use_sim_time={use_sim_time} params={params_path} "
-                f"rtabmap_db={db_path} slam_start_after_launch_sec={slam_start_after_launch}"
+                f"rtabmap_db={db_path} slam_start_after_launch_sec={slam_start_after_launch} "
+                f"frontier_config={frontier_yaml} use_sim_uwb={use_sim_uwb}"
             )
         )
     )
@@ -128,9 +166,45 @@ def _build(context, *args, **kwargs):
         )
         actions.append(ExecuteProcess(cmd=["rm", "-f", db_path], output="log"))
 
+    if use_sim_uwb:
+        try:
+            loc_share = get_package_share_directory("moonmapper_localization")
+            loc_launch = os.path.join(loc_share, "launch", "sim_uwb_localization.launch.py")
+            if os.path.isfile(loc_launch):
+                loc_delay = max(0.0, sim_stab_slam * 0.5) if start_sim else 0.0
+                actions.append(
+                    TimerAction(
+                        period=loc_delay,
+                        actions=[
+                            IncludeLaunchDescription(
+                                PythonLaunchDescriptionSource(loc_launch),
+                                launch_arguments={
+                                    "use_sim_time": LaunchConfiguration("use_sim_time"),
+                                }.items(),
+                            )
+                        ],
+                    )
+                )
+            else:
+                actions.append(
+                    LogInfo(
+                        msg=(
+                            "[autonomous_exploration_full] WARN: moonmapper_localization "
+                            "ikke installert — use_sim_uwb ignorert"
+                        )
+                    )
+                )
+        except Exception as exc:  # noqa: BLE001
+            actions.append(
+                LogInfo(
+                    msg=(f"[autonomous_exploration_full] WARN: localization pakke: {exc}")
+                )
+            )
+
     if start_slam:
         rtab_launch = os.path.join(_launch_dir, "rtabmap_sim.launch.py")
         rviz_rtab_arg = "true" if start_rtabmap_viz else "false"
+        rtab_odom = "/odometry/filtered" if use_sim_uwb else "/diff_drive_controller/odom"
         slam_bundle = TimerAction(
             period=max(0.0, slam_start_after_launch),
             actions=[
@@ -140,6 +214,8 @@ def _build(context, *args, **kwargs):
                         "use_sim_time": LaunchConfiguration("use_sim_time"),
                         "database_path": db_path,
                         "rtabmap_rviz": rviz_rtab_arg,
+                        "odom_topic": rtab_odom,
+                        "publish_tf_map": "true",
                     }.items(),
                 ),
                 TimerAction(period=1.0, actions=[_nav2_common.map_relay_node()]),
@@ -174,6 +250,7 @@ def _build(context, *args, **kwargs):
                             "use_sim_time": use_sim_time,
                             "params_file": params_path,
                             "rviz": rviz_nav,
+                            "world_preset": wpreset,
                             "depth_image_topic": "/depth_camera/depth_image",
                             "camera_info_topic": "/depth_camera/camera_info",
                         }.items(),
@@ -269,10 +346,11 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("use_sim_time", default_value="true"),
             DeclareLaunchArgument(
                 "world_preset",
-                default_value="earth_explore",
+                default_value="expo_20x20",
                 description=(
-                    "moon | earth | earth_explore, videresendes til sim_rover_clean / gazebo_rover. "
-                    "earth til earth_arena.sdf; earth_explore til earth_arena_explore.sdf."
+                    "moon | earth | earth_explore | expo_20x20, videresendes til sim_rover_clean / gazebo_rover. "
+                    "earth til earth_arena.sdf; earth_explore til earth_arena_explore.sdf; "
+                    "expo_20x20 til earth_arena_expo_20x20.sdf (standard for autonomi)."
                 ),
             ),
             DeclareLaunchArgument(
@@ -293,6 +371,14 @@ def generate_launch_description() -> LaunchDescription:
                 description=(
                     "Når start_sim og start_slam er true: sekunder etter launch før RTAB-Map startes "
                     "(sim starter med en gang)."
+                ),
+            ),
+            DeclareLaunchArgument(
+                "use_sim_uwb",
+                default_value="false",
+                description=(
+                    "Når true: starter moonmapper_localization (fake UWB + EKF) for fused odom "
+                    "på /odometry/filtered."
                 ),
             ),
             DeclareLaunchArgument("start_sim", default_value="true"),

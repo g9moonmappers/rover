@@ -1,5 +1,6 @@
 # Frontier explorer (moonmapper_nav2). Lastes av autonomous_exploration_full.launch.py
 # Publiserer /frontier_explorer/status og /frontier_explorer/current_goal med TRANSIENT_LOCAL
+frontier_explorer:
   ros__parameters:
     use_sim_time: true
     map_topic: /map
@@ -49,7 +50,7 @@
     min_clearance_after_failure_m: 0.55
     failure_retry_delay_sec: 0.5
     stuck_blocked_cancel_sec: 2.5
-    min_reachable_cells_for_bfs: 500
+    min_reachable_cells_for_bfs: 120
     retreat_from_frontier_steps: 3
     blacklist_radius: 0.6
     blacklist_radius_m: 0.6
@@ -139,8 +140,6 @@
     completion_check_enabled: true
     completion_no_frontier_attempts: 5
     min_exploration_time_sec: 30.0
-    coverage_stable_time_sec: 10.0
-    coverage_delta_threshold_cells: 30
     enable_too_close_recovery: false
     too_close_distance_m: 0.20
     too_close_sustain_sec: 5.0
