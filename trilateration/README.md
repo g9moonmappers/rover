@@ -1,11 +1,11 @@
-# UWB Indoor Trilateration
+# UWB Trilateration
 
-2D indoor positioning using 4x BU-04 UWB modules and an Arduino Mega.
+2D indoor positioning using 5x BU-04 UWB modules and an Arduino Mega.
 
 ## Hardware
 
-- 4x BU-04 anchor modules, each with an Arduino Nano ESP32 and battery
-- 1x BU-04 tag module connected to Arduino Mega
+- 4x BU-04 modules acting as anchors, each with an Arduino Nano ESP32 and battery
+- 1x BU-04 module acting as a tag connected to the Arduino Mega
 - 1x Arduino Mega running the trilateration code
 
 ## Wiring
@@ -15,26 +15,25 @@
 
 
 **Tag (Arduino Mega):**
-- BU-04 TX2 → Mega pin 17 (RX2)
-- BU-04 RX2 → Mega pin 16 (TX2)
-- BU-04 3V3 → 3.3V
-- BU-04 GND → GND
+<img width="4961" height="3508" alt="BU04_til_pc" src="https://github.com/user-attachments/assets/a76333a0-a9f8-49fb-9537-dfa68b2090ec" />
 
-## Anchor Configuration
 
-Flash each anchor with the configure sketch, setting the correct ID:
+## Anchor and Tag Configuration
 
+Flash each anchor and tag [using the BU-04_flashing code](BU04_FLASHING.ino):
+
+Anchor:
 ```cpp
-configureBU04(0, 1, 1, 1); // BS0
-configureBU04(1, 1, 1, 1); // BS1
-configureBU04(2, 1, 1, 1); // BS2
-configureBU04(3, 1, 1, 1); // BS3
+configureBU04(0, 1, 1, 1); // anchor 0
+configureBU04(1, 1, 1, 1); // anchor 1
+configureBU04(2, 1, 1, 1); // anchor 2
+configureBU04(3, 1, 1, 1); // anchor 3
 ```
 
 Tag:
 
 ```cpp
-configureBU04(0, 0, 1, 1);
+configureBU04(0, 0, 1, 1);  // tag 0
 ```
 
 ## Physical Placement
@@ -48,11 +47,11 @@ BS1 (0, y) -------- BS3 (x, y)
 BS0 (0, 0) -------- BS2 (x, 0)
 ```
 
-Measure x and y in metres from the BS0 corner and update `BS[4][2]` in `trilateration.ino`.
+Measure x and y in metres from the BS0 corner and update `BS[4][2]` in [](BU04_ROVER_READ.ino).
 
 ## Calibration
 
-1. Flash `calibration/calibration.ino` to the Mega
+1. Flash [](BU04_CALIBRATION.ino) to the Mega
 2. Place tag at each distance (100mm to 1500mm in 100mm steps)
 3. Send any character in Serial Monitor to advance to next step
 4. Paste results into Google Sheets, plot measured vs actual
