@@ -313,7 +313,8 @@ def generate_launch_description() -> LaunchDescription:
                     launch_arguments={
                         "use_sim_time": LaunchConfiguration("use_sim_time"),
                         "world_preset": LaunchConfiguration("world_preset"),
-                        "use_rviz": LaunchConfiguration("start_rviz"),
+                        # Ikke start RViz fra sim-launch når vi også starter Nav2-RViz.
+                        "use_rviz": "false",
                         "force_set_pose_after_spawn": LaunchConfiguration(
                             "force_set_pose_after_spawn"
                         ),
@@ -385,7 +386,7 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("start_slam", default_value="true"),
             DeclareLaunchArgument("start_nav2", default_value="true"),
             DeclareLaunchArgument("start_explorer", default_value="true"),
-            DeclareLaunchArgument("start_rviz", default_value="false"),
+            DeclareLaunchArgument("start_rviz", default_value="true"),
             DeclareLaunchArgument("initial_spin", default_value="true"),
             DeclareLaunchArgument("delete_rtabmap_db", default_value="false"),
             DeclareLaunchArgument("navigation_stack_delay", default_value="12.0"),
@@ -398,16 +399,16 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("map_frame", default_value="map"),
             DeclareLaunchArgument(
                 "cmd_vel_topic",
-                default_value="/cmd_vel_raw",
+                default_value="/frontier_explorer/explorer_cmd_vel",
                 description=(
-                    "Initial spin publiserer hit. Bruk /cmd_vel_raw når safety_obstacle kobler "
-                    "cmd_vel_raw til /cmd_vel (Nav2 publiserer til cmd_vel_raw)."
+                    "Valgfri explorer-intern topic. IKKE /cmd_vel_raw (Nav2 + safety eier den). "
+                    "Spin/recovery/backout bruker maneuver_cmd_vel_topic (/cmd_vel)."
                 ),
             ),
             DeclareLaunchArgument(
                 "start_rtabmap_viz",
-                default_value="false",
-                description="Når true: starter RTAB-Map RViz (uavhengig av start_rviz for Nav2).",
+                default_value="true",
+                description="Når true: starter RTAB-Map GUI (rtabmap_viz) ved launch.",
             ),
             DeclareLaunchArgument(
                 "minimal_nav2_debug",

@@ -25,7 +25,7 @@ def main() -> int:
         help="How many burst rows to use. Default is 11 because the current training data uses 11 rows.",
     )
     args = p.parse_args()
-
+ 
     raw_path = Path(args.raw)
     if not raw_path.exists():
         print(f"Raw CSV not found: {raw_path}")

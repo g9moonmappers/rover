@@ -9,6 +9,17 @@ earth_6wd:
   rocker_diff_coupling_mode: weak
   spawn_z: 0.030
 
+# expo_6wd: expo-arena — friere rocker for skarpe svinger (walking-beam av).
+expo_6wd:
+  simple_collision_debug: true
+  wheel_mu1: 1.5
+  wheel_mu2: 0.8
+  wheel_use_fdir1: true
+  wheel_kp: 8000.0
+  wheel_kd: 80.0
+  rocker_diff_coupling_mode: off
+  spawn_z: 0.030
+
 # earth_stable_6wd: balansert langs-frem og side-slip for skid-steer (ingen tipping).
 earth_stable_6wd:
   simple_collision_debug: true

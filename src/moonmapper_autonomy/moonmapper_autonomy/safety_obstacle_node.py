@@ -43,9 +43,9 @@ class SafetyObstacleNode(Node):
         self.declare_parameter("output_cmd_topic", "/cmd_vel_safe")
         self.declare_parameter("scan_topic", "/scan")
         self.declare_parameter("scan_timeout_sec", 0.5)
-        self.declare_parameter("allow_reverse_when_blocked", False)
-        self.declare_parameter("reverse_speed_when_blocked", 0.05)
-        self.declare_parameter("safety_controls_backup", False)
+        self.declare_parameter("allow_reverse_when_blocked", True)
+        self.declare_parameter("reverse_speed_when_blocked", 0.12)
+        self.declare_parameter("safety_controls_backup", True)
         self.declare_parameter("enable_safety_gating", True)
         self.declare_parameter("publish_safety_debug", True)
         self.declare_parameter("debug_log_period_sec", 1.0)
@@ -170,11 +170,6 @@ class SafetyObstacleNode(Node):
             return 0.0
         return max(0.0, min(1.0, (min_front - self._front_stop) / denom))
 
-    def _turn_allowed(self, left: Optional[float], right: Optional[float]) -> bool:
-        if left is None or right is None:
-            return True
-        return left >= self._min_turn_clr and right >= self._min_turn_clr
-
     def _corridor_opening(
         self, left: Optional[float], right: Optional[float]
     ) -> Tuple[bool, float]:
@@ -188,6 +183,54 @@ class SafetyObstacleNode(Node):
             and width >= self._corridor_width
         )
         return ok, width
+
+    def _clamped_wz(self, wz: float) -> float:
+        if abs(wz) <= 0.02:
+            return 0.0
+        return math.copysign(min(abs(wz), self._safe_turn), wz)
+
+    def _evasive_wz(
+        self,
+        left: Optional[float],
+        right: Optional[float],
+        wz: float,
+    ) -> float:
+        """Sving mot siden med mest klaring når fremover er blokkert."""
+        if abs(wz) > 0.06:
+            return self._clamped_wz(wz)
+        turn = self._safe_turn * 0.9
+        if left is None and right is None:
+            return turn * 0.5
+        if left is None:
+            return -turn
+        if right is None:
+            return turn
+        l, r = float(left), float(right)
+        if l > r + 0.03:
+            return turn
+        if r > l + 0.03:
+            return -turn
+        return turn if l >= r else -turn
+
+    def _needs_backup(
+        self,
+        front: float,
+        left: Optional[float],
+        right: Optional[float],
+    ) -> bool:
+        if not (self._allow_rev and self._safety_backup):
+            return False
+        if front > self._front_stop:
+            return False
+        if front <= self._emergency_m:
+            return True
+        if left is None or right is None:
+            return front <= self._emergency_m + 0.04
+        width = float(left) + float(right)
+        return (
+            min(float(left), float(right)) < self._min_turn_clr
+            and width < self._corridor_width * 0.9
+        )
 
     def _maybe_log_debug(
         self,
@@ -274,7 +317,6 @@ class SafetyObstacleNode(Node):
             return
 
         scale = self._forward_scale(front)
-        turn_ok = self._turn_allowed(left, right)
         corridor_ok, passage_w = self._corridor_opening(left, right)
 
         # Nav2 publiserer til cmd_vel_raw; vi sender filtrert hastighet videre.
@@ -300,29 +342,39 @@ class SafetyObstacleNode(Node):
                 )
                 safe.linear.x = creep
                 if abs(wz) > 0.02:
-                    safe.angular.z = math.copysign(
-                        min(abs(wz), self._safe_turn), wz
-                    )
+                    safe.angular.z = self._evasive_wz(left, right, wz)
             else:
                 state = "STOP"
                 reason = "stop_forward"
                 if lx > 0.0:
                     safe.linear.x = 0.0
-                if abs(wz) > 0.02 and turn_ok:
-                    state = "ALLOW_TURN"
-                    reason = "stop_allow_turn"
-                    safe.angular.z = math.copysign(min(abs(wz), self._safe_turn), wz)
+                if self._needs_backup(front, left, right):
+                    state = "BACKUP_REQUIRED"
+                    reason = "stop_backup"
+                    safe.linear.x = -self._reverse_speed
+                    safe.angular.z = self._evasive_wz(left, right, wz) * 0.35
+                else:
+                    ewz = self._evasive_wz(left, right, wz)
+                    if abs(ewz) > 0.02:
+                        state = "EVASIVE_TURN"
+                        reason = "steer_away"
+                        safe.angular.z = ewz
         else:
             state = "EMERGENCY_STOP"
             reason = "emergency_stop_only"
             if lx > 0.0:
                 safe.linear.x = 0.0
-            if self._safety_backup and self._allow_rev and lx > 0.0:
+            if self._needs_backup(front, left, right):
                 state = "BACKUP_REQUIRED"
                 reason = "emergency_backup"
                 safe.linear.x = -self._reverse_speed
-            elif abs(wz) > 0.02 and turn_ok:
-                safe.angular.z = math.copysign(min(abs(wz), self._safe_turn), wz)
+                safe.angular.z = self._evasive_wz(left, right, wz) * 0.35
+            else:
+                ewz = self._evasive_wz(left, right, wz)
+                if abs(ewz) > 0.02:
+                    state = "EVASIVE_TURN"
+                    reason = "emergency_steer_away"
+                    safe.angular.z = ewz
 
         blocked = state in ("STOP", "EMERGENCY_STOP", "BACKUP_REQUIRED")
         pub_topics(blocked, front, state.lower())

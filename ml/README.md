@@ -344,21 +344,19 @@ python ml/training/split_dataset.py \
 ### 10.5 `train_random_forest.py`
 
 ```bash
-# Trener på train.csv (anbefalt etter split)
+# Standard: tren på train.csv, rapporter val-metrikker på val.csv
 python ml/training/train_random_forest.py \
-  --train-csv ml/datasets/processed/train.csv \
-  --label-column label_object
-
-# Trener på hele triad_features.csv (hurtig test)
-python ml/training/train_random_forest.py \
-  --features ml/datasets/processed/triad_features.csv \
+  --train-input ml/datasets/processed/train.csv \
+  --val-input ml/datasets/processed/val.csv \
   --label-column label_object
 
 # Materialklassifisering
 python ml/training/train_random_forest.py \
-  --train-csv ml/datasets/processed/train.csv \
   --label-column label_material
 ```
+
+Trener **kun** på `train.csv`. `test.csv` holdes helt ute til `evaluate_model.py`.
+Trenings på `triad_features.csv` blokkeres for å unngå datalekkasje.
 
 **Output (standard):**
 

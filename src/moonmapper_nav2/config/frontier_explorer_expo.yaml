@@ -6,7 +6,12 @@ frontier_explorer:
     map_frame: map
     base_frame: base_footprint
     navigate_action: /navigate_to_pose
-    cmd_vel_topic: /cmd_vel_raw
+    # Explorer skal ikke publisere Twist() på /cmd_vel_raw (Nav2 eier den).
+    cmd_vel_topic: /frontier_explorer/explorer_cmd_vel
+    explorer_stomp_cmd_vel_raw: false
+    maneuver_cmd_vel_topic: /cmd_vel
+    initial_spin_direct_cmd_vel: true
+    initial_spin_cmd_vel_topic: /cmd_vel
 
     min_goal_distance: 1.2
     min_goal_distance_m: 1.2
@@ -46,8 +51,6 @@ frontier_explorer:
     initial_spin_max_duration_sec: 12.0
     initial_spin_target_rad: 3.14
     initial_spin_angular_z: 0.35
-    initial_spin_direct_cmd_vel: true
-    initial_spin_cmd_vel_topic: /cmd_vel
     map_settle_after_spin_sec: 1.0
     explore_immediately_after_spin: true
 
@@ -69,8 +72,13 @@ frontier_explorer:
     stuck_blocked_cancel_sec: 3.0
 
     enable_too_close_recovery: true
-    too_close_distance_m: 0.18
-    too_close_sustain_sec: 2.0
+    too_close_distance_m: 0.22
+    too_close_sustain_sec: 1.5
+
+    enable_active_backout_on_failure: true
+    backout_duration_sec: 1.4
+    backout_speed_mps: 0.14
+    recovery_spin_angle_deg: 130.0
 
     publish_markers: true
     publish_debug_markers: false

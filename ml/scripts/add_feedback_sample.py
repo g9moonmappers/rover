@@ -180,9 +180,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     print("python ml/training/split_dataset.py")
     print(
-        "python ml/training/train_random_forest.py --input ml/datasets/processed/train.csv "
+        "python ml/training/train_random_forest.py "
+        "--train-input ml/datasets/processed/train.csv "
+        "--val-input ml/datasets/processed/val.csv "
         "--label-column size_group --model-output ml/models/random_forest_size.joblib "
-        "--encoder-output ml/models/label_encoder_size.joblib --train-all"
+        "--encoder-output ml/models/label_encoder_size.joblib"
     )
     return 0
 

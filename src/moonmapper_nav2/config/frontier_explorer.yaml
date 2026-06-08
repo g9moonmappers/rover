@@ -7,7 +7,9 @@ frontier_explorer:
     map_frame: map
     base_frame: base_footprint
     navigate_action: /navigate_to_pose
-    cmd_vel_topic: /cmd_vel_raw
+    cmd_vel_topic: /frontier_explorer/explorer_cmd_vel
+    explorer_stomp_cmd_vel_raw: false
+    maneuver_cmd_vel_topic: /cmd_vel
     exploration_rate_hz: 2.0
     min_frontier_cluster_size: 5
     min_goal_distance: 0.8

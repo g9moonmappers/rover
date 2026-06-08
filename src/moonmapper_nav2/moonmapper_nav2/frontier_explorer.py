@@ -114,6 +114,7 @@ class FrontierExplorer(Node):
         self._spin_t0 = 0.0
         self._last_odom_yaw: Optional[float] = None
         self._map_after_spin = 0.0
+        self._map_settle_zeroed = False
         self._goal_deadline = 0.0
         self._start_at = self.get_clock().now() + Duration(
             seconds=float(self.get_parameter("start_delay_sec").value)
@@ -163,13 +164,18 @@ class FrontierExplorer(Node):
         self._nav = ActionClient(self, NavigateToPose, nav_topic, callback_group=self._cb)
         cmd_topic = str(self.get_parameter("cmd_vel_topic").value)
         self._cmd = self.create_publisher(Twist, cmd_topic, 10)
+        drive_topic = str(self.get_parameter("maneuver_cmd_vel_topic").value)
+        self._drive_cmd = self.create_publisher(Twist, drive_topic, 10)
         self._cmd_spin: Optional[object] = None
+        spin_topic = str(self.get_parameter("initial_spin_cmd_vel_topic").value)
         if bool(self.get_parameter("initial_spin_direct_cmd_vel").value):
-            spin_topic = str(self.get_parameter("initial_spin_cmd_vel_topic").value)
             self._cmd_spin = self.create_publisher(Twist, spin_topic, 10)
             self.get_logger().info(
                 f"startspin publiserer til {spin_topic} (utenom collision_monitor pa {cmd_topic})"
             )
+        self.get_logger().info(
+            f"maneuver/recovery/backout publiserer til {drive_topic} (mot diff_drive-relay)"
+        )
         self._pub_stat = self.create_publisher(String, "/frontier_explorer/status", FRONTIER_TOPIC_QOS)
         self._pub_goal = self.create_publisher(PoseStamped, "/frontier_explorer/current_goal", FRONTIER_TOPIC_QOS)
         self._pub_start = self.create_publisher(
@@ -186,7 +192,7 @@ class FrontierExplorer(Node):
             )
         self._recovery = RecoveryRunner(
             self.get_parameter,
-            lambda tw: self._cmd.publish(tw),
+            lambda tw: self._drive_cmd.publish(tw),
             self._odom_yaw,
         )
         self.create_subscription(
@@ -306,6 +312,16 @@ class FrontierExplorer(Node):
         except tf2_ros.TransformException:
             return None
 
+    def _spin_yaw(self) -> Optional[float]:
+        """Yaw for initial spin: odom→base, fall back til map-pose."""
+        y = self._odom_yaw()
+        if y is not None:
+            return y
+        pm = self._pose_map()
+        if pm is not None:
+            return pm[2]
+        return None
+
     def _cmd_ok(self) -> bool:
         if not bool(self.get_parameter("require_cmd_vel_subscriber").value):
             return True
@@ -315,10 +331,24 @@ class FrontierExplorer(Node):
             t = str(self.get_parameter("cmd_vel_topic").value)
         return self.count_subscribers(t) >= 1
 
-    def _publish_cmd(self, tw: Twist, *, spin: bool = False) -> None:
-        if spin and self._cmd_spin is not None:
+    def _may_publish_explorer_cmd(self) -> bool:
+        return bool(self.get_parameter("explorer_stomp_cmd_vel_raw").value)
+
+    def _publish_maneuver_cmd(self, tw: Twist) -> None:
+        """Spin/recovery/backout — aldri /cmd_vel_raw (Nav2 eier den)."""
+        self._drive_cmd.publish(tw)
+        if self._may_publish_explorer_cmd():
+            self._cmd.publish(tw)
+        if self._cmd_spin is not None:
             self._cmd_spin.publish(tw)
-        else:
+
+    def _publish_cmd(self, tw: Twist, *, spin: bool = False) -> None:
+        if spin:
+            if self._cmd_spin is not None:
+                self._cmd_spin.publish(tw)
+            else:
+                self._publish_maneuver_cmd(tw)
+        elif self._may_publish_explorer_cmd():
             self._cmd.publish(tw)
 
     def _on_obstacle_state(self, msg: String) -> None:
@@ -685,9 +715,12 @@ class FrontierExplorer(Node):
 
 
     def _zero(self) -> None:
+        """Nullstill kun valgfri explorer-cmd — aldri overdøv Nav2 på /cmd_vel_raw."""
         try:
             z = Twist()
-            self._cmd.publish(z)
+            if self._may_publish_explorer_cmd():
+                self._cmd.publish(z)
+            self._drive_cmd.publish(z)
             if self._cmd_spin is not None:
                 self._cmd_spin.publish(z)
         except Exception:
@@ -743,7 +776,9 @@ class FrontierExplorer(Node):
 
         if self._st == _St.WAIT_MAP:
             if self._map_after_spin > 0.0:
-                self._zero()
+                if not self._map_settle_zeroed:
+                    self._zero()
+                    self._map_settle_zeroed = True
                 if time.monotonic() < self._map_after_spin:
                     self._stat("WAIT_MAP_AFTER_SPIN")
                     return
@@ -786,6 +821,7 @@ class FrontierExplorer(Node):
                 self._st = _St.SPIN
                 self._last_odom_yaw = None
                 self._spin_accum = 0.0
+                self._map_settle_zeroed = False
                 self._stat("INITIAL_SPIN")
                 return
             self._begin_nav2()
@@ -808,6 +844,7 @@ class FrontierExplorer(Node):
                 self._st = _St.SPIN
                 self._last_odom_yaw = None
                 self._spin_accum = 0.0
+                self._map_settle_zeroed = False
                 self._stat("INITIAL_SPIN")
                 return
             self._begin_nav2()
@@ -819,9 +856,13 @@ class FrontierExplorer(Node):
                 self._throttle_log(f"waiting for subscriber on {t} before initial spin")
                 self._stat("WAIT_CMD_VEL_SUB")
                 return
-            y = self._odom_yaw()
+            y = self._spin_yaw()
             nowt = time.monotonic()
             if y is None:
+                self._throttle_log("initial spin: venter på yaw (odom eller map TF)")
+                tw = Twist()
+                tw.angular.z = float(self.get_parameter("initial_spin_angular_z").value)
+                self._publish_cmd(tw, spin=True)
                 return
             if self._last_odom_yaw is None:
                 self._last_odom_yaw = y
@@ -840,6 +881,7 @@ class FrontierExplorer(Node):
             if (self._spin_accum >= tgt and (nowt - self._spin_t0) >= mn) or (nowt - self._spin_t0) >= mx:
                 self._zero()
                 self._did_initial_spin = True
+                self._map_settle_zeroed = False
                 self._map_after_spin = nowt + float(
                     self.get_parameter("map_settle_after_spin_sec").value
                 )
@@ -1029,7 +1071,8 @@ class FrontierExplorer(Node):
             if time.monotonic() < self._backout_end:
                 tw = Twist()
                 tw.linear.x = -abs(float(self.get_parameter("backout_speed_mps").value))
-                self._cmd.publish(tw)
+                tw.angular.z = 0.35
+                self._publish_maneuver_cmd(tw)
                 return
             self._zero()
             self._st = _St.SELECT

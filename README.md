@@ -42,6 +42,7 @@ ros2 launch moonmapper_nav2 autonomous_exploration_full.launch.py \
 ```bash
 source scripts/activate_ml.sh
 python ml/training/extract_triad_features.py
+python ml/training/split_dataset.py
 python ml/training/train_random_forest.py
 ```
 

@@ -49,8 +49,8 @@ def generate_launch_description() -> LaunchDescription:
             "physics_profile",
             default_value="",
             description=(
-                "Gazebo preset: safe_6wd | earth_stable_6wd | earth_6wd | realistic_6wd | debug_low_friction. "
-                "Tom = world_preset velger (moon til safe_6wd, earth til earth_stable_6wd)."
+                "Gazebo preset: safe_6wd | earth_stable_6wd | expo_6wd | earth_6wd | realistic_6wd | debug_low_friction. "
+                "Tom = world_preset velger (expo_20x20 til expo_6wd, moon til safe_6wd, earth til earth_stable_6wd)."
             ),
         ),
         DeclareLaunchArgument(

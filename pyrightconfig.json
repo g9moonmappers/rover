@@ -1,0 +1,16 @@
+{
+  "include": ["src", "ml"],
+  "exclude": ["**/build", "**/install", "**/log", "**/__pycache__"],
+  "extraPaths": [
+    "/opt/ros/jazzy/lib/python3.12/site-packages",
+    "/opt/ros/humble/lib/python3.10/site-packages",
+    "/usr/lib/python3/dist-packages",
+    "install/moonmapper_nav2/lib/python3.12/site-packages",
+    "install/moonmapper_autonomy/lib/python3.12/site-packages",
+    "install/moonmapper_bringup/lib/python3.12/site-packages",
+    "install/moonmapper_localization/lib/python3.12/site-packages"
+  ],
+  "typeCheckingMode": "off",
+  "reportMissingImports": "warning",
+  "reportMissingModuleSource": false
+}

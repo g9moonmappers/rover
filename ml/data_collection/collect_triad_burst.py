@@ -1,7 +1,14 @@
 """
 Samle inn en Triad BURST over serial og lagre den som rå CSV.
 
-Scriptet samarbeider med Arduino sketch "moonmapper_triad_logger":
+Scriptet snakker med Arduino-sketchen moonmapper_triad_logger over USB.
+Typisk flyt:
+  1. Valgfritt SB (sample background) for sand/bakgrunn
+  2. BURST med sample_id: Arduino sender CSV-header og 20 spektralrader
+  3. Lagring som ml/datasets/raw/<sample_id>_triad_raw.csv
+  4. Valgfritt: ny rad i metadata.csv som kobler fil til labels og forsøksforhold
+
+Råfilen brukes senere av ml/training/extract_triad_features.py.
 """
 
 from __future__ import annotations
@@ -15,16 +22,20 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 
+# Serial-innstillinger som må matche Arduino-sketchen.
 DEFAULT_BAUD = 115200
 DEFAULT_TIMEOUT_S = 5.0
 DEFAULT_OUTPUT_DIR = "ml/datasets/raw"
 DEFAULT_METADATA_PATH = "ml/datasets/metadata.csv"
 
+# Antall målinger per objekt; samsvarer med feature_config.yaml (anbefalt 20).
 BURST_ROWS_EXPECTED = 20
+# To AS7265X-sensorer med 18 bølgelengder hver (S0/S1 eller L/R i CSV).
 SPECTRAL_COLUMNS_EXPECTED = 36
 BASE_COLUMNS_EXPECTED = 3  # sample_id, burst_index, timestamp_ms
 CSV_HEADER_PREFIX = "sample_id,burst_index,timestamp_ms,"
 
+# Kolonner i metadata.csv; må være konsistent med resten av ML-pipelinen.
 METADATA_HEADER: List[str] = [
     "sample_id",
     "label_object",
@@ -42,8 +53,9 @@ METADATA_HEADER: List[str] = [
     "buried_level",
 ]
 
-# avhengighet for serial kommunikasjon med Arduino
+
 def _require_pyserial():
+    """Importer pyserial; kast tydelig feil hvis pakken mangler i venv."""
     try:
         import serial  # type: ignore
 
@@ -53,6 +65,7 @@ def _require_pyserial():
 
 
 def _list_available_serial_ports() -> List[str]:
+    """Returner liste over COM/tty-enheter for feilsøking når --port er feil."""
     _require_pyserial()
 
     try:
@@ -72,6 +85,7 @@ def _list_available_serial_ports() -> List[str]:
 
 
 def _print_available_serial_ports() -> None:
+    """Skriv tilgjengelige porter til stdout (--list-ports)."""
     ports = _list_available_serial_ports()
 
     if not ports:
@@ -85,6 +99,12 @@ def _print_available_serial_ports() -> None:
 
 
 def _readline_with_timeout(ser, *, timeout_s: float) -> Optional[str]:
+    """
+    Les én tekstlinje fra serial med egen tidsfrist.
+
+    pyserial timeout=0 gir non-blocking lesing; vi samler byte for byte
+    til newline eller tidsfrist. Ignorerer carriage return (Windows-linjer).
+    """
     deadline = time.time() + timeout_s
     buffer = bytearray()
 
@@ -105,6 +125,11 @@ def _readline_with_timeout(ser, *, timeout_s: float) -> Optional[str]:
 
 
 def _send_command_and_expect_ok(ser, *, command: str, timeout_s: float) -> None:
+    """
+    Send én linje til Arduino og forvent svar som starter med OK.
+
+    Brukes for SB og lignende kommandoer som ikke returnerer CSV.
+    """
     ser.write((command.strip() + "\n").encode("utf-8"))
     ser.flush()
 
@@ -118,6 +143,7 @@ def _send_command_and_expect_ok(ser, *, command: str, timeout_s: float) -> None:
 
 
 def _print_debug_line(*, enabled: bool, line: str) -> None:
+    """Valgfri utskrift av rå serial-linjer (--debug)."""
     if enabled:
         print(f"[collect_triad_burst][debug] RX: {line}", file=sys.stderr)
 
@@ -127,6 +153,12 @@ def _wait_after_background(
     wait_after_sb_s: float,
     interactive_after_background: bool,
 ) -> None:
+    """
+    Pause mellom bakgrunnsmåling (SB) og objekt-BURST.
+
+    Gir tid til å plassere objekt i sanden. Enten fast timer (--wait-after-sb)
+    eller manuell Enter (--interactive-after-background).
+    """
     time.sleep(0.2)  # Kort stabilisering etter SB før bruker/objekt håndtering.
 
     if wait_after_sb_s > 0:
@@ -146,13 +178,16 @@ def _wait_after_background(
         try:
             input()
         except EOFError:
-            # for autonom kjøring, uten interaktiv terminal.
+            # Ingen TTY (f.eks. cron eller pipe): hopp over Enter, fortsett.
             pass
 
 
 def _read_csv_header_from_arduino(ser, *, timeout_s: float, debug: bool) -> str:
     """
-    ignorerer INFO/DEBUG linjer og les frem til Arduino sender CSV headeren for BURST.
+    Les frem til Arduino sender CSV-headeren for BURST.
+
+    Arduino kan sende INFO/DEBUG-linjer først; vi ignorerer dem til vi ser
+    en linje som starter med sample_id,burst_index,timestamp_ms,
     """
     deadline = time.time() + timeout_s
 
@@ -177,6 +212,12 @@ def _read_csv_header_from_arduino(ser, *, timeout_s: float, debug: bool) -> str:
 
 
 def _read_burst_rows_from_arduino(ser, *, timeout_s: float, debug: bool) -> List[str]:
+    """
+    Les BURST_ROWS_EXPECTED datarader etter header.
+
+    Hver rad må inneholde komma (CSV). Tomme linjer og støy hoppes over
+    innenfor tidsfristen for den aktuelle raden.
+    """
     rows: List[str] = []
 
     for row_index in range(BURST_ROWS_EXPECTED):
@@ -197,6 +238,7 @@ def _read_burst_rows_from_arduino(ser, *, timeout_s: float, debug: bool) -> List
             if candidate.startswith("ERROR"):
                 raise RuntimeError(f"Arduino error during burst: {candidate}")
 
+            # Første linje med komma behandles som CSV-rad for denne indeksen.
             if "," in candidate:
                 accepted_line = candidate
                 break
@@ -223,18 +265,22 @@ def collect_burst(
     debug: bool = False,
     timeout_s: float = DEFAULT_TIMEOUT_S,
 ) -> Tuple[str, List[str]]:
+    """
+    Åpne serial, kjør SB (valgfritt), deretter BURST for sample_id.
 
+    Returnerer (header_linje, liste_med_rå_csv_rader) uten å skrive til disk.
+    """
     serial = _require_pyserial()
 
     try:
-        # timeout=0 gjør lesingen non blocking. Timeout håndteres i våre egne lesefunksjoner.
+        # timeout=0: non-blocking lesing; tidsfrister håndteres i _readline_with_timeout.
         ser = serial.Serial(port=port, baudrate=baud, timeout=0)
     except Exception as exc:  # noqa: BLE001
         hint = _platform_port_hint(port)
         raise RuntimeError(f"Could not open serial port {port!r} at {baud}: {exc}\n{hint}") from exc
 
     with ser:
-        # Arduino resetter ofte når serial porten åpnes. Pausen gjør oppstarten stabil.
+        # Mange Arduino-kort resetter ved åpning av serial; vent før kommandoer.
         time.sleep(2.0)
         ser.reset_input_buffer()
         ser.reset_output_buffer()
@@ -255,6 +301,12 @@ def collect_burst(
 
 
 def write_raw_csv(*, output_path: Path, header_line: str, rows: List[str]) -> None:
+    """
+    Skriv header og rader til rå CSV med csv-modulen (korrekt escaping).
+
+    Validerer at hver rad har samme antall kolonner som header og minst
+    3 metadata-kolonner pluss 36 spektralkolonner.
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     header = next(csv.reader([header_line]))
@@ -275,6 +327,7 @@ def write_raw_csv(*, output_path: Path, header_line: str, rows: List[str]) -> No
 
 
 def ensure_metadata_file(path: Path) -> None:
+    """Opprett metadata.csv med header hvis filen ikke finnes fra før."""
     path.parent.mkdir(parents=True, exist_ok=True)
 
     if path.exists():
@@ -286,6 +339,7 @@ def ensure_metadata_file(path: Path) -> None:
 
 
 def append_metadata_row(path: Path, row: Dict[str, str]) -> None:
+    """Legg til én rad i metadata.csv; manglende felt blir tomme strenger."""
     ensure_metadata_file(path)
 
     with path.open("a", newline="") as file:
@@ -327,7 +381,7 @@ def _build_metadata_row(args: argparse.Namespace, *, triad_file: str) -> Dict[st
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    """Definer alle terminalargumentene"""
+    """Definer alle terminalargumentene for innsamling og metadata."""
     parser = argparse.ArgumentParser(description="Samle Triad burst over serial og lagre rå CSV.")
     parser.add_argument(
         "--list-ports",
@@ -396,6 +450,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Append a metadata row after successful burst collection.",
     )
 
+    # Metadata-felt; brukes av trening når --append-metadata er satt.
     parser.add_argument("--label-object", default="", help="Metadata: label_object")
     parser.add_argument("--label-material", default="", help="Metadata: label_material")
     parser.add_argument("--sand-type", default="", help="Metadata: sand_type (e.g. torr_sand).")
@@ -421,8 +476,25 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _platform_port_hint(port: str) -> str:
+    """Kort hint ved feil åpning av serial, avhengig av OS."""
+    if os.name == "nt":
+        return (
+            f"På Windows: sjekk at {port!r} finnes i Enhetsbehandling, "
+            "lukk Arduino Serial Monitor, og prøv --list-ports."
+        )
+    return (
+        f"På Linux: sjekk tilgang til {port!r} (gruppe dialout), "
+        "kjør med --list-ports, og at ingen annen prosess bruker porten."
+    )
+
+
 def main(argv: Optional[List[str]] = None) -> int:
-    """Kjør innsamling fra terminal og returner exit kode."""
+    """
+    Kjør innsamling fra terminal og returner exit-kode.
+
+    0 = OK, 2 = feil (serial, timeout, eksisterende fil uten --overwrite).
+    """
     parser = _build_parser()
     args = parser.parse_args(argv)
 

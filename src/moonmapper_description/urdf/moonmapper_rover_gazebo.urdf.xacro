@@ -32,7 +32,7 @@
         <friction>
           <ode>
             <mu>$(arg wheel_mu2)</mu>
-            <mu2>$(arg wheel_mu2)</mu2>
+            <mllu2>$(arg wheel_mu2)</mu2>
             <slip1>0.0</slip1>
             <slip2>0.0</slip2>
             <xacro:if value="$(arg wheel_use_fdir1)">
