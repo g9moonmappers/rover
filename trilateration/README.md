@@ -1,28 +1,23 @@
-# UWB Trilateration
+# UWB Trilaterering
+2D innendørs posisjonering med 5x BU-04 UWB-moduler og en Arduino Mega.
 
-2D indoor positioning using 5x BU-04 UWB modules and an Arduino Mega.
+## Maskinvare
+- 4x BU-04-moduler som fungerer som ankere, hver er koblet opp med en Arduino Nano ESP32 og et 7,4V batteri
+- 1x BU-04-modul som fungerer som tag, koblet til Arduino Mega
+- 1x Arduino Mega som kjører selve trilatereringen
 
-## Hardware
-
-- 4x BU-04 modules acting as anchors, each with an Arduino Nano ESP32 and battery
-- 1x BU-04 module acting as a tag connected to the Arduino Mega
-- 1x Arduino Mega running the trilateration code
-
-## Wiring
-
-**Anchors (Arduino Nano ESP32):**
-<img width="3508" height="2481" alt="trilaterering_final_oppsett" src="https://github.com/user-attachments/assets/be7cbaa7-8550-4211-ae7d-4e304a0e0b85" />
+## Kabling
+**Ankere (Arduino Nano ESP32):**
+<img width="3508" height="2481" alt="trilaterering" src="https://github.com/user-attachments/assets/c0a5c831-9592-49cc-9fbc-031b45a2ac6e" />
 
 
 **Tag (Arduino Mega):**
 <img width="4961" height="3508" alt="BU04_til_pc" src="https://github.com/user-attachments/assets/a76333a0-a9f8-49fb-9537-dfa68b2090ec" />
 
+## Konfigurering av ankere og tag
+Flash hvert anker og tag [med BU-04_flashing-koden](BU04_FLASHING.ino):
 
-## Anchor and Tag Configuration
-
-Flash each anchor and tag [using the BU-04_flashing code](BU04_FLASHING.ino):
-
-Anchor:
+Anker:
 ```cpp
 configureBU04(0, 1, 1, 1); // anchor 0
 configureBU04(1, 1, 1, 1); // anchor 1
@@ -31,14 +26,12 @@ configureBU04(3, 1, 1, 1); // anchor 3
 ```
 
 Tag:
-
 ```cpp
 configureBU04(0, 0, 1, 1);  // tag 0
 ```
 
-## Physical Placement
-
-Place anchors at the four corners of the room/container:
+## Fysisk plassering
+Plasser ankerne i de fire hjørnene av rommet/containeren:
 
 ```
 BS1 (0, y) -------- BS3 (x, y)
@@ -47,33 +40,34 @@ BS1 (0, y) -------- BS3 (x, y)
 BS0 (0, 0) -------- BS2 (x, 0)
 ```
 
-Measure x and y in metres from the BS0 corner and update `BS[4][2]` in [](BU04_ROVER_READ.ino).
+Mål x og y i meter relativt til BS0-hjørnet som fungerer som origo til koordinatsystemet og oppdater [ankerPosisjoner i rover read-koden](BU04_ROVER_READ.ino).
 
-## Calibration
+## Kalibrering
+1. Flash [kalibreringskoden](BU04_CALIBRATION.ino) til Arduino
+2. Legg en tommestokk flatt på et bord med minimum 1,5 m lengde
+3. Plasser tag på starten av tommestokken pekende mot tommestokken
+4. Plasser et anker 10 cm unna tag-en pekende mot tag-en
+5. Send et valgfritt tegn i Serial Monitor og trykk enter
+6. Flytt deretter ankeret 10 cm lenger unna tag-en
+7. Gjenta steg 5-6 helt til ankeret ligger på 1,5m
+8. Lim inn resultatene i et Google Sheets/Excel ark og utfør lineær regresjon
+9. Utfør kalibreringen flere ganger helt til du er fornøyd med nøyaktigheten, for oss var dette tre ganger for hver anker
+10. Oppdater `kalibreringStigning` og `kalibreringSkjæringspunkt` i [rover read-koden](BU04_ROVER_READ.ino) med stigningstallet og konstantleddet fra kalibreringen
+11. Utfør kalibreringen på resten av ankrene 
 
-1. Flash [](BU04_CALIBRATION.ino) to the Mega
-2. Place tag at each distance (100mm to 1500mm in 100mm steps)
-3. Send any character in Serial Monitor to advance to next step
-4. Paste results into Google Sheets, plot measured vs actual
-5. Get slope and intercept from trendline
-6. Update `CALIB_SLOPE` and `CALIB_INTERCEPT` in `trilateration/trilateration.ino`
-7. Repeat until trendline is ~1.0*x + 0
+## Visualisering
+1. Flash og kjør [rover read-koden](BU04_ROVER_READ.ino) på Arduino mega meg tag-en
+2. Lukk Arduino Serial Monitor
+3. Åpne [visualiseringskoden](BU04_ROVER_READ.ino) i Processing IDE
+4. Sett riktig COM-port og oppdater ankerposisjonene
+5. Kjør koden 
 
-## Visualisation
-
-1. Flash `trilateration/trilateration.ino` to Mega
-2. Close Arduino Serial Monitor
-3. Open `visualisation/visualisation.pde` in Processing IDE
-4. Set correct COM port and base station positions
-5. Run — circles show distances from each anchor, dot shows tag position
-
-## Output Format
-
-Serial output at 115200 baud:
+## Dataformat fra trilatereringen
+På Serial Monitor ved 115200 baud får man :
 
 ```
 x,y,dist0,dist1,dist2,dist3
 ```
 
-- x, y: tag position in metres
-- dist0-3: calibrated distance to each base station in metres
+- x, y: tag-posisjon i meter
+- dist0-3: kalibrert avstand til hver basestasjon i meter
