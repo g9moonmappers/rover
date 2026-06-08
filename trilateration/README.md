@@ -1,6 +1,11 @@
 # UWB Trilaterering
 2D innendørs posisjonering med 5x BU-04 UWB-moduler og en Arduino Mega.
 
+## Nyttige linker
+https://docs.ai-thinker.com/en/uwb_1/
+https://www.youtube.com/watch?v=ziLU9w88G3I&t=1s
+https://www.youtube.com/watch?v=fpTaFBbadyE&t=129s
+
 ## Maskinvare
 - 4x BU-04-moduler som fungerer som ankere, hver er koblet opp med en Arduino Nano ESP32 og et 7,4V batteri
 - 1x BU-04-modul som fungerer som tag, koblet til Arduino Mega
