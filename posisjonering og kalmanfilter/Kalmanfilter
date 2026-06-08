@@ -1,5 +1,3 @@
-## Kalmanfilter kode på arduino
-
 
 
     #include <Kalman.h>
